@@ -1,3 +1,4 @@
+import logging
 from django.contrib.auth import authenticate
 from rest_framework import viewsets, permissions, generics, status
 from rest_framework.response import Response
@@ -7,6 +8,18 @@ from .models import Perfil, Asignatura, Tarea, Alerta
 from .serializers import (
     PerfilSerializer, AsignaturaSerializer, TareaSerializer, AlertaSerializer, RegistroSerializer,
 )
+
+logger = logging.getLogger('seguridad')
+
+
+def obtener_ip_cliente(request):
+    # X-Forwarded-For es el header que usan los proxys (Railway, etc.)
+    # para indicar la IP real del usuario, ya que sin esto veríamos
+    # siempre la IP interna del proxy en vez de la del cliente real.
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        return x_forwarded_for.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR')
 
 
 class AsignaturaViewSet(viewsets.ModelViewSet):
@@ -67,6 +80,10 @@ class RegistroView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         usuario = serializer.save()
+        logger.info(
+            'Usuario nuevo registrado: %s (IP: %s)',
+            usuario.username, obtener_ip_cliente(request),
+        )
         refresh = RefreshToken.for_user(usuario)
         return Response(
             {
@@ -91,11 +108,20 @@ class LoginView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         username = request.data.get('username')
         password = request.data.get('password')
+        ip = obtener_ip_cliente(request)
         usuario = authenticate(username=username, password=password)
 
         if usuario is None:
+            logger.warning(
+                'Login fallido para usuario "%s" (IP: %s)',
+                username, ip,
+            )
             return Response({'detail': 'Usuario o contraseña incorrectos.'}, status=400)
 
+        logger.info(
+            'Login exitoso: %s (IP: %s)',
+            usuario.username, ip,
+        )
         refresh = RefreshToken.for_user(usuario)
         return Response({
             'access': str(refresh.access_token),
@@ -122,6 +148,14 @@ class LogoutView(generics.GenericAPIView):
             token = RefreshToken(refresh_token)
             token.blacklist()
         except TokenError:
+            logger.warning(
+                'Intento de logout con token inválido/expirado: %s (IP: %s)',
+                request.user.username, obtener_ip_cliente(request),
+            )
             return Response({'detail': 'Token inválido o ya expirado.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        logger.info(
+            'Logout: %s (IP: %s)',
+            request.user.username, obtener_ip_cliente(request),
+        )
         return Response(status=status.HTTP_205_RESET_CONTENT)

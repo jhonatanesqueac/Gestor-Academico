@@ -258,3 +258,41 @@ CONTENT_SECURITY_POLICY = {
         'form-action': [SELF],
     },
 }
+
+import os
+
+LOGS_DIR = BASE_DIR / 'logs'
+os.makedirs(LOGS_DIR, exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{asctime} [{levelname}] {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'archivo_seguridad': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOGS_DIR / 'seguridad.log',
+            'maxBytes': 5 * 1024 * 1024,  # 5 MB por archivo
+            'backupCount': 5,  # conserva hasta 5 archivos rotados
+            'formatter': 'verbose',
+        },
+        'consola': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'seguridad': {
+            'handlers': ['archivo_seguridad', 'consola'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}

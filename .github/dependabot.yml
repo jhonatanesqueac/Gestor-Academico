@@ -1,0 +1,21 @@
+version: 2
+updates:
+  # Dependencias de Python (Django, DRF, etc.)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  # Dependencias de Node/npm (React, axios, etc.)
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  # Las propias GitHub Actions que usas (ej. actions/checkout)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

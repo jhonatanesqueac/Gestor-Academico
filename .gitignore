@@ -26,3 +26,4 @@ frontend/.env
 # Sistema
 .DS_Store
 Thumbs.db
+logs/

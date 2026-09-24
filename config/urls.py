@@ -16,9 +16,15 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from decouple import config
+
+# La URL del admin viene del .env para que no quede hardcodeada ni
+# expuesta en el repositorio de GitHub — cualquiera que vea el código
+# público no debería poder adivinar dónde vive el panel de admin.
+ADMIN_URL = config('ADMIN_URL', default='admin/')
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path(ADMIN_URL, admin.site.urls),
     path('api/', include('academico.urls')),
     path('api-auth/', include('rest_framework.urls')),
 ]
