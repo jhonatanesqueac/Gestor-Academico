@@ -1,0 +1,348 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@500;600;700&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* ---------- Paleta base: "Verdes Nebulosos" ---------- */
+  /* forest #04202C · evergreen #304040 · pine #5B7065 · fog #C9D1C8 */
+
+  /* ---------- Tokens shadcn (contenido, siempre claro) ---------- */
+  --background: #E9EBE6;
+  --foreground: #0C1614;
+
+  --card: #F6F7F3;
+  --card-foreground: #0C1614;
+  --popover: #F6F7F3;
+  --popover-foreground: #0C1614;
+
+  --primary: #4D6357;
+  --primary-foreground: #F6F7F3;
+
+  --secondary: #DCDFD6;
+  --secondary-foreground: #0C1614;
+
+  --muted: #DCDFD6;
+  --muted-foreground: #5F6D63;
+
+  --accent: #DDE3D9;
+  --accent-foreground: #304040;
+
+  --destructive: #8B3A2B;
+  --destructive-foreground: #F6F7F3;
+
+  --border: #DEE1D9;
+  --input: #BCC2B3;
+  --ring: #5B7065;
+
+  --radius: 0.625rem;
+
+  /* Charts: se afinan cuando trabajemos la vista de Carga semanal */
+  --chart-1: #5B7065;
+  --chart-2: #304040;
+  --chart-3: #A3AF9C;
+  --chart-4: #8B3A2B;
+  --chart-5: #96702E;
+
+  /* ---------- Sidebar (siempre oscuro, independiente del resto) ---------- */
+  --sidebar: #04202C;
+  --sidebar-foreground: #A9B5AD;
+  --sidebar-primary: #C9D1C8;
+  --sidebar-primary-foreground: #04202C;
+  --sidebar-accent: #304040;
+  --sidebar-accent-foreground: #E8ECE4;
+  --sidebar-border: #163029;
+  --sidebar-ring: #C9D1C8;
+
+  /* ---------- Estados funcionales sin equivalente en shadcn ---------- */
+  --media: #96702E;
+  --media-soft: #F1E9D8;
+  --ok: #4E6B78;
+  --ok-soft: #E4EBEC;
+
+  /* ---------- Tipografía y layout propios ---------- */
+  --font-texto: 'Inter', system-ui, sans-serif;
+  --font-display: 'Inter Tight', system-ui, sans-serif;
+  --sidebar-w: 240px;
+  --sombra-flotante: 0 8px 24px rgba(15, 23, 42, 0.14);
+
+  /* ============================================================
+     PUENTE DE COMPATIBILIDAD
+     Traduce los nombres de variables de fases anteriores del
+     proyecto a los tokens actuales de shadcn, para que ningún
+     componente viejo quede "huérfano" sin su color.
+     ============================================================ */
+
+  /* Nombres de la primera pasada de diseño (Fase 9) */
+  --color-primary: var(--primary);
+  --color-bg: var(--background);
+  --color-card: var(--card);
+  --color-text: var(--foreground);
+  --color-text-muted: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-rojo: var(--destructive);
+  --color-rojo-bg: #F1E4E0;
+  --color-naranja: var(--media);
+  --color-naranja-bg: var(--media-soft);
+  --color-verde: var(--ok);
+  --color-verde-bg: var(--ok-soft);
+  --sombra-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --sombra-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --radio: var(--radius-md);
+  --radio-sm: var(--radius-sm);
+
+  /* Nombres de la segunda pasada (StudyFlow, antes de shadcn) */
+  --bg: var(--background);
+  --surface: var(--card);
+  --surface-hover: var(--secondary);
+  --text: var(--foreground);
+  --text-muted: var(--muted-foreground);
+  --text-faint: var(--muted-foreground);
+  --border-strong: var(--input);
+  --alerta: var(--destructive);
+  --alerta-soft: #F1E4E0;
+
+  /* Sidebar: los nombres que usan Sidebar.jsx y Layout.jsx */
+  --sidebar-bg: var(--sidebar);
+  --sidebar-hover: var(--sidebar-accent);
+  --sidebar-text: var(--sidebar-foreground);
+  --sidebar-active-bg: var(--sidebar-accent);
+  --sidebar-active-text: var(--sidebar-accent-foreground);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-texto);
+  background-color: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--foreground);
+}
+
+h1 { font-size: 22px; }
+h2 { font-size: 18px; }
+h3 { font-size: 15px; }
+
+p { margin: 0; }
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  color: inherit;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  color: var(--foreground);
+}
+
+.num-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ---------- Botones (legacy, para vistas que aún no migran a <Button/> de shadcn) ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  font-weight: 500;
+  font-size: 13.5px;
+  border: 1px solid transparent;
+  transition: background-color 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primario {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.btn-primario:hover {
+  background: color-mix(in oklab, var(--primary) 88%, black);
+}
+
+.btn-primario:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secundario {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+.btn-secundario:hover {
+  background: var(--secondary);
+  border-color: var(--input);
+}
+
+.btn-texto {
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  color: var(--muted-foreground);
+  transition: color 0.12s ease, background-color 0.12s ease;
+}
+
+.btn-texto:hover {
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+/* ---------- Superficies ---------- */
+
+.panel, .tarjeta {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.panel-flotante {
+  background: var(--card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--sombra-flotante);
+}
+
+/* ---------- Formularios ---------- */
+
+.input-campo {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  background: var(--card);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.input-campo:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--accent);
+}
+
+.etiqueta-campo {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  margin-bottom: 5px;
+}
+
+/* ---------- Microanimaciones ---------- */
+
+@keyframes entrar {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animar-entrada {
+  animation: entrar 0.28s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@theme inline {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-heading: 'Inter Tight', system-ui, sans-serif;
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
