@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { UserPlus, Workflow } from 'lucide-react'
-import api from '../api/axios'
+import api, { setAccessToken } from '../api/axios'
+import { useAuth } from '../context/useAuth'
 
 function Registro() {
   const [username, setUsername] = useState('')
@@ -12,6 +13,7 @@ function Registro() {
   const [error, setError] = useState('')
   const [enviando, setEnviando] = useState(false)
   const navigate = useNavigate()
+  const { iniciarSesion } = useAuth()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -26,9 +28,9 @@ function Registro() {
         carrera,
         semestre: parseInt(semestre, 10),
       })
-      localStorage.setItem('access', response.data.access)
-      localStorage.setItem('refresh', response.data.refresh)
+      setAccessToken(response.data.access)
       localStorage.setItem('nombre', response.data.nombre)
+      iniciarSesion()
       navigate('/dashboard')
     } catch (err) {
       console.error('Error en registro:', err)

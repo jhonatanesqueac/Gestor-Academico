@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { Bell, Menu } from 'lucide-react'
 import Sidebar from './Slidebar'
 import api from '../api/axios'
+import { useAuth } from '../context/useAuth'
 
 function Layout({ activa, onCambiarPestaña, children, alertas = [], onMarcarLeida, asignaturas = [], filtroAsignatura, onSeleccionarAsignatura }) {
   const navigate = useNavigate()
+  const { cerrarSesion } = useAuth()
   const [mostrarAlertas, setMostrarAlertas] = useState(false)
   const [sidebarAbierto, setSidebarAbierto] = useState(() => window.innerWidth >= 1024)
   const nombre = localStorage.getItem('nombre') || 'Estudiante'
@@ -26,19 +28,17 @@ function Layout({ activa, onCambiarPestaña, children, alertas = [], onMarcarLei
   }
 
   const handleLogout = async () => {
-    const refresh = localStorage.getItem('refresh')
     try {
-      if (refresh) {
-        await api.post('auth/logout/', { refresh })
-      }
+      // El backend lee el refresh token directamente de la cookie
+      // httpOnly -- ya no hace falta que se lo mandemos nosotros.
+      await api.post('auth/logout/', {})
     } catch (err) {
       // Si falla (token ya vencido, sin conexión, etc.) no pasa nada
       // grave: igual limpiamos la sesión local del usuario.
       console.error('No se pudo invalidar el refresh token:', err)
     } finally {
-      localStorage.removeItem('access')
-      localStorage.removeItem('refresh')
       localStorage.removeItem('nombre')
+      cerrarSesion()
       navigate('/login')
     }
   }

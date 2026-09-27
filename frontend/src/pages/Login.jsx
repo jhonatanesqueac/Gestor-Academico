@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { LogIn, Workflow } from 'lucide-react'
-import api from '../api/axios'
+import api, { setAccessToken } from '../api/axios'
+import { useAuth } from '../context/useAuth'
 
 function Login() {
   const [username, setUsername] = useState('')
@@ -9,6 +10,7 @@ function Login() {
   const [error, setError] = useState('')
   const [enviando, setEnviando] = useState(false)
   const navigate = useNavigate()
+  const { iniciarSesion } = useAuth()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -17,9 +19,9 @@ function Login() {
 
     try {
       const response = await api.post('auth/login/', { username, password })
-      localStorage.setItem('access', response.data.access)
-      localStorage.setItem('refresh', response.data.refresh)
+      setAccessToken(response.data.access)
       localStorage.setItem('nombre', response.data.nombre)
+      iniciarSesion()
       navigate('/dashboard')
     } catch (err) {
       console.error('Error de login:', err)

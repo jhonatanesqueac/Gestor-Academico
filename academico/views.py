@@ -1,8 +1,11 @@
 import logging
+import re
+from django.conf import settings
 from django.contrib.auth import authenticate
 from rest_framework import viewsets, permissions, generics, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.exceptions import TokenError
 from .models import Perfil, Asignatura, Tarea, Alerta
 from .serializers import (
@@ -20,6 +23,44 @@ def obtener_ip_cliente(request):
     if x_forwarded_for:
         return x_forwarded_for.split(',')[0].strip()
     return request.META.get('REMOTE_ADDR')
+
+
+def origen_es_valido(request):
+    """
+    Defensa extra para los endpoints que leen la cookie httpOnly del
+    refresh token. En producción esa cookie usa SameSite=None (hace
+    falta para viajar entre el dominio del frontend en Vercel y el del
+    backend en Railway), lo que significa que el navegador la adjunta
+    incluso en peticiones iniciadas por OTRO sitio. CORS ya evita que
+    ese sitio ajeno pueda LEER la respuesta, pero esto rechaza la
+    petición desde el inicio si el origen no es uno de los nuestros.
+    """
+    origen = request.META.get('HTTP_ORIGIN')
+    if not origen:
+        # Sin header Origin (mismo origen en navegadores más viejos, o
+        # un cliente que no es navegador) se deja pasar — el riesgo
+        # real es un navegador operando desde un sitio ajeno, y ese
+        # caso SIEMPRE manda el header Origin.
+        return True
+    if origen in settings.CORS_ALLOWED_ORIGINS:
+        return True
+    for patron in getattr(settings, 'CORS_ALLOWED_ORIGIN_REGEXES', []):
+        if re.match(patron, origen):
+            return True
+    return False
+
+
+def set_refresh_cookie(response, refresh_token):
+    max_age = int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds())
+    response.set_cookie(
+        key=settings.REFRESH_COOKIE_NAME,
+        value=str(refresh_token),
+        max_age=max_age,
+        httponly=True,
+        secure=settings.REFRESH_COOKIE_SECURE,
+        samesite=settings.REFRESH_COOKIE_SAMESITE,
+        path='/api/auth/',  # solo se manda en rutas de auth, no en toda la API
+    )
 
 
 class AsignaturaViewSet(viewsets.ModelViewSet):
@@ -85,15 +126,16 @@ class RegistroView(generics.CreateAPIView):
             usuario.username, obtener_ip_cliente(request),
         )
         refresh = RefreshToken.for_user(usuario)
-        return Response(
+        response = Response(
             {
                 'access': str(refresh.access_token),
-                'refresh': str(refresh),
                 'username': usuario.username,
                 'nombre': usuario.first_name,
             },
             status=201,
         )
+        set_refresh_cookie(response, refresh)
+        return response
 
 
 @method_decorator(ratelimit(key='ip', rate='5/m', block=True), name='post')
@@ -109,7 +151,7 @@ class LoginView(generics.GenericAPIView):
         username = request.data.get('username')
         password = request.data.get('password')
         ip = obtener_ip_cliente(request)
-        usuario = authenticate(username=username, password=password)
+        usuario = authenticate(request=request, username=username, password=password)
 
         if usuario is None:
             logger.warning(
@@ -123,12 +165,13 @@ class LoginView(generics.GenericAPIView):
             usuario.username, ip,
         )
         refresh = RefreshToken.for_user(usuario)
-        return Response({
+        response = Response({
             'access': str(refresh.access_token),
-            'refresh': str(refresh),
             'username': usuario.username,
             'nombre': usuario.first_name,
         })
+        set_refresh_cookie(response, refresh)
+        return response
 
 
 class LogoutView(generics.GenericAPIView):
@@ -136,13 +179,21 @@ class LogoutView(generics.GenericAPIView):
     Invalida el refresh token del lado del servidor (lo mete a la
     blacklist), para que aunque alguien lo haya robado antes del
     logout, no lo pueda seguir usando para sacar nuevos access tokens.
+    También borra la cookie httpOnly donde vivía.
     """
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        refresh_token = request.data.get('refresh')
+        refresh_token = request.COOKIES.get(settings.REFRESH_COOKIE_NAME)
+
+        response = Response(status=status.HTTP_205_RESET_CONTENT)
+        response.delete_cookie(settings.REFRESH_COOKIE_NAME, path='/api/auth/')
+
         if not refresh_token:
-            return Response({'detail': 'Falta el refresh token.'}, status=status.HTTP_400_BAD_REQUEST)
+            # No había cookie (ej. ya se había cerrado sesión antes) —
+            # igual respondemos 205 para que el frontend limpie su
+            # estado local sin problema.
+            return response
 
         try:
             token = RefreshToken(refresh_token)
@@ -152,10 +203,52 @@ class LogoutView(generics.GenericAPIView):
                 'Intento de logout con token inválido/expirado: %s (IP: %s)',
                 request.user.username, obtener_ip_cliente(request),
             )
-            return Response({'detail': 'Token inválido o ya expirado.'}, status=status.HTTP_400_BAD_REQUEST)
+            return response
 
         logger.info(
             'Logout: %s (IP: %s)',
             request.user.username, obtener_ip_cliente(request),
         )
-        return Response(status=status.HTTP_205_RESET_CONTENT)
+        return response
+
+
+class RefreshView(generics.GenericAPIView):
+    """
+    Reemplaza al TokenRefreshView por defecto de simplejwt: en vez de
+    leer el refresh token del body del request, lo lee de la cookie
+    httpOnly. Con ROTATE_REFRESH_TOKENS=True, cada renovación genera
+    un refresh nuevo, así que también actualizamos la cookie.
+    """
+    permission_classes = [permissions.AllowAny]
+    # Se llama automáticamente en cada carga de página (silent
+    # refresh) y solo funciona con una cookie httpOnly válida, que
+    # nadie puede adivinar por fuerza bruta -- el throttle general de
+    # anónimos (pensado para proteger login/registro) es innecesario
+    # aquí y terminaría bloqueando sesiones legítimas.
+    throttle_classes = []
+
+    def post(self, request, *args, **kwargs):
+        if not origen_es_valido(request):
+            return Response({'detail': 'Origen no permitido.'}, status=status.HTTP_403_FORBIDDEN)
+
+        refresh_token = request.COOKIES.get(settings.REFRESH_COOKIE_NAME)
+        if not refresh_token:
+            return Response({'detail': 'No hay sesión activa.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        serializer = TokenRefreshSerializer(data={'refresh': refresh_token})
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError:
+            return Response(
+                {'detail': 'Sesión expirada, inicia sesión de nuevo.'},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        datos = serializer.validated_data
+        response = Response({'access': datos['access']})
+
+        nuevo_refresh = datos.get('refresh')
+        if nuevo_refresh:
+            set_refresh_cookie(response, nuevo_refresh)
+
+        return response

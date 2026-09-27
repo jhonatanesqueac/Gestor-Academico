@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import api from '../api/axios'
 import TarjetaTarea from './TarjetaTarea'
 import ModalEditarTarea from './ModalEditarTarea'
@@ -12,6 +12,14 @@ const columnas = [
 function Kanban({ tareas, asignaturas, onTareaActualizada, onTareaEliminada, filtroAsignatura, onQuitarFiltro }) {
   const [errorMsg, setErrorMsg] = useState('')
   const [tareaEditando, setTareaEditando] = useState(null)
+  const [columnaMovil, setColumnaMovil] = useState('PENDIENTE')
+  const [esMovil, setEsMovil] = useState(() => window.innerWidth < 1024)
+
+  useEffect(() => {
+    const alRedimensionar = () => setEsMovil(window.innerWidth < 1024)
+    window.addEventListener('resize', alRedimensionar)
+    return () => window.removeEventListener('resize', alRedimensionar)
+  }, [])
 
   const handleCambiarEstado = async (tareaId, nuevoEstado) => {
     setErrorMsg('')
@@ -67,12 +75,35 @@ function Kanban({ tareas, asignaturas, onTareaActualizada, onTareaEliminada, fil
 
       {errorMsg && <p className="text-destructive text-sm mb-3">{errorMsg}</p>}
 
+      {/* Selector de columna — solo visible en móvil */}
+      <div className="flex gap-1.5 mb-4 lg:hidden">
+        {columnas.map((columna) => {
+          const cantidad = tareasVisibles.filter((t) => t.estado === columna.estado).length
+          const esActiva = columnaMovil === columna.estado
+          return (
+            <button
+              key={columna.estado}
+              onClick={() => setColumnaMovil(columna.estado)}
+              className="flex-1 text-[12.5px] font-medium py-2 rounded-md transition-colors"
+              style={{
+                background: esActiva ? 'var(--primary)' : 'var(--card)',
+                color: esActiva ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              {columna.titulo} <span className="num-tabular opacity-70">({cantidad})</span>
+            </button>
+          )
+        })}
+      </div>
+
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         {columnas.map((columna) => {
           const tareasDeColumna = tareasVisibles.filter((t) => t.estado === columna.estado)
+          if (esMovil && columna.estado !== columnaMovil) return null
 
           return (
-            <div key={columna.estado} className="flex-1 min-w-0">
+            <div key={columna.estado} className="flex-1 min-w-0 w-full">
               <div className="flex justify-between items-center px-1 pb-3 border-b mb-3">
                 <h3 className="text-[13px] text-muted-foreground font-medium">{columna.titulo}</h3>
                 <span className="num-tabular text-xs font-semibold text-muted-foreground/70 bg-muted rounded-full px-2 py-0.5">

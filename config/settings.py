@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_ratelimit',
     'csp',
+    'axes',
     'academico',
 ]
 
@@ -87,6 +88,18 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Debe ir DESPUÉS de AuthenticationMiddleware, y se recomienda que
+    # sea de las últimas -- procesa cada respuesta para registrar
+    # intentos fallidos de login.
+    'axes.middleware.AxesMiddleware',
+]
+
+# django-axes necesita insertarse ANTES del backend normal de Django
+# para poder interceptar y bloquear intentos antes de que se validen
+# las credenciales.
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -188,6 +201,26 @@ else:
     CORS_ALLOWED_ORIGIN_REGEXES = [
         r'^https://gestioedu(-[a-z0-9-]+)?\.vercel\.app$',
     ]
+
+# Necesario para que el navegador incluya/reciba la cookie httpOnly
+# del refresh token en peticiones cross-origin (frontend en Vercel,
+# backend en Railway). Sin esto, el navegador ignora Set-Cookie en
+# respuestas cross-origin sin importar lo demás.
+CORS_ALLOW_CREDENTIALS = True
+
+REFRESH_COOKIE_NAME = 'refresh_token'
+if DEBUG:
+    # En local, frontend y backend viven en el mismo "site" (localhost,
+    # solo cambia el puerto), así que SameSite=Lax basta y no requiere
+    # HTTPS.
+    REFRESH_COOKIE_SAMESITE = 'Lax'
+    REFRESH_COOKIE_SECURE = False
+else:
+    # En producción, frontend (Vercel) y backend (Railway) son dominios
+    # distintos de verdad -> hace falta SameSite=None, que a su vez
+    # exige Secure=True (ya garantizado por HTTPS obligatorio).
+    REFRESH_COOKIE_SAMESITE = 'None'
+    REFRESH_COOKIE_SECURE = True
 
 if DEBUG:
     # En desarrollo local (un solo proceso) LocMemCache funciona bien
@@ -296,3 +329,12 @@ LOGGING = {
         },
     },
 }
+
+# Bloquea la combinación específica de usuario + IP, no la IP sola --
+# así alguien con muchas IPs no puede evadir el bloqueo probando
+# contraseñas contra UN usuario en particular, y un usuario legítimo
+# en una red compartida (oficina, universidad) no se ve afectado por
+# los intentos fallidos de otra persona en esa misma red.
+AXES_LOCKOUT_PARAMETERS = [['username', 'ip_address']]
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = 1  # 1 hora antes de que el bloqueo se levante solo

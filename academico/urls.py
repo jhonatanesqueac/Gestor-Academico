@@ -1,7 +1,9 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenRefreshView
-from .views import AsignaturaViewSet, TareaViewSet, AlertaViewSet, PerfilViewSet, RegistroView, LoginView, LogoutView
+from .views import (
+    AsignaturaViewSet, TareaViewSet, AlertaViewSet, PerfilViewSet,
+    RegistroView, LoginView, LogoutView, RefreshView,
+)
 
 router = DefaultRouter()
 router.register(r'asignaturas', AsignaturaViewSet, basename='asignatura')
@@ -12,6 +14,6 @@ router.register(r'perfiles', PerfilViewSet, basename='perfil')
 urlpatterns = [
     path('auth/login/', LoginView.as_view(), name='api-login'),
     path('auth/registro/', RegistroView.as_view(), name='api-registro'),
-    path('auth/refresh/', TokenRefreshView.as_view(), name='api-refresh'),
+    path('auth/refresh/', RefreshView.as_view(), name='api-refresh'),
     path('auth/logout/', LogoutView.as_view(), name='api-logout'),
 ] + router.urls
