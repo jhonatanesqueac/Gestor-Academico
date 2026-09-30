@@ -77,7 +77,7 @@ function Login() {
             />
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
+          <div style={{ marginBottom: '8px' }}>
             <label className="etiqueta-campo">Contraseña</label>
             <input
               type="password"
@@ -87,6 +87,12 @@ function Login() {
               required
             />
           </div>
+
+          <p style={{ marginBottom: '20px', textAlign: 'right' }}>
+            <Link to="/olvide-password" style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </p>
 
           {error && (
             <p style={{ color: 'var(--alerta)', fontSize: '12px', marginBottom: '16px' }}>{error}</p>

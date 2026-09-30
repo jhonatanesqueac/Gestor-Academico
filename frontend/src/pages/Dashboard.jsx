@@ -105,6 +105,7 @@ function Dashboard() {
       {pestañaActiva === 'gestionar' && (
         <Gestionar
           asignaturas={asignaturas}
+          tareas={tareas}
           onAsignaturaCreada={handleAsignaturaCreada}
           onTareaCreada={handleTareaCreada}
           onAsignaturaActualizada={handleAsignaturaActualizada}

@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     AsignaturaViewSet, TareaViewSet, AlertaViewSet, PerfilViewSet,
     RegistroView, LoginView, LogoutView, RefreshView,
+    SolicitarResetPasswordView, ConfirmarResetPasswordView,
 )
 
 router = DefaultRouter()
@@ -16,4 +17,6 @@ urlpatterns = [
     path('auth/registro/', RegistroView.as_view(), name='api-registro'),
     path('auth/refresh/', RefreshView.as_view(), name='api-refresh'),
     path('auth/logout/', LogoutView.as_view(), name='api-logout'),
+    path('auth/password/reset/', SolicitarResetPasswordView.as_view(), name='api-password-reset'),
+    path('auth/password/reset/confirmar/', ConfirmarResetPasswordView.as_view(), name='api-password-reset-confirmar'),
 ] + router.urls

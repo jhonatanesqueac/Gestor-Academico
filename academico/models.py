@@ -9,6 +9,14 @@ class Perfil(models.Model):
     usuario = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
     carrera = models.CharField(max_length=100, default='Ingeniería de Sistemas')
     semestre = models.PositiveSmallIntegerField(default=1)
+    institucion = models.CharField(max_length=150, blank=True, default='')
+    telefono = models.CharField(max_length=20, blank=True, default='')
+    # blank=True/null=True a nivel de modelo para no romper las cuentas
+    # que ya existen sin este dato (admin, estudiante1, etc.) -- el
+    # RegistroSerializer es quien exige este campo para cuentas NUEVAS.
+    documento_identidad = models.CharField(
+        max_length=20, blank=True, null=True, unique=True,
+    )
 
     def __str__(self):
         return f"Perfil de {self.usuario.username}"

@@ -26,7 +26,7 @@ function ModalEditarTarea({ tarea, asignaturas, onGuardado, onCerrar }) {
       const response = await api.patch(`tareas/${tarea.id}/`, {
         asignatura: parseInt(asignaturaId, 10),
         titulo,
-        fecha_entrega: fechaEntrega,
+        fecha_entrega: new Date(fechaEntrega).toISOString(),
         dificultad: parseInt(dificultad, 10),
         horas_estimadas: parseFloat(horasEstimadas),
       })

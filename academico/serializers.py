@@ -8,7 +8,7 @@ from .models import Perfil, Asignatura, Tarea, Alerta
 class PerfilSerializer(serializers.ModelSerializer):
     class Meta:
         model = Perfil
-        fields = ['id', 'usuario', 'carrera', 'semestre']
+        fields = ['id', 'usuario', 'carrera', 'semestre', 'institucion', 'telefono', 'documento_identidad']
         read_only_fields = ['usuario']
 
 
@@ -115,9 +115,12 @@ class RegistroSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
     password = serializers.CharField(write_only=True, validators=[validate_password])
     nombre = serializers.CharField(max_length=100)
-    email = serializers.EmailField(required=False, allow_blank=True)
+    email = serializers.EmailField()
     carrera = serializers.CharField(max_length=100, default='Ingeniería de Sistemas')
     semestre = serializers.IntegerField(default=1, min_value=1, max_value=12)
+    institucion = serializers.CharField(max_length=150)
+    telefono = serializers.CharField(max_length=20)
+    documento_identidad = serializers.CharField(max_length=20)
 
     def validate_username(self, valor):
         valor = valor.strip()
@@ -125,6 +128,11 @@ class RegistroSerializer(serializers.Serializer):
             raise serializers.ValidationError('El usuario debe tener al menos 3 caracteres.')
         if User.objects.filter(username=valor).exists():
             raise serializers.ValidationError('Ese nombre de usuario ya está en uso.')
+        return valor
+
+    def validate_email(self, valor):
+        if User.objects.filter(email__iexact=valor).exists():
+            raise serializers.ValidationError('Ya existe una cuenta con ese correo.')
         return valor
 
     def validate_nombre(self, valor):
@@ -139,19 +147,61 @@ class RegistroSerializer(serializers.Serializer):
             raise serializers.ValidationError('La carrera debe tener al menos 2 caracteres.')
         return valor
 
+    def validate_institucion(self, valor):
+        valor = valor.strip()
+        if len(valor) < 2:
+            raise serializers.ValidationError('La institución debe tener al menos 2 caracteres.')
+        return valor
+
+    def validate_telefono(self, valor):
+        import re
+        valor = valor.strip()
+        if not re.fullmatch(r'[\d\s+()-]{7,20}', valor):
+            raise serializers.ValidationError('Ingresa un número de teléfono válido.')
+        return valor
+
+    def validate_documento_identidad(self, valor):
+        valor = valor.strip()
+        if not valor.isdigit():
+            raise serializers.ValidationError('El documento debe contener solo números.')
+        if len(valor) < 5:
+            raise serializers.ValidationError('El documento debe tener al menos 5 dígitos.')
+        if Perfil.objects.filter(documento_identidad=valor).exists():
+            raise serializers.ValidationError('Ya existe una cuenta registrada con ese documento.')
+        return valor
+
     def create(self, datos_validados):
         usuario = User.objects.create_user(
             username=datos_validados['username'],
             password=datos_validados['password'],
-            email=datos_validados.get('email', ''),
+            email=datos_validados['email'],
             first_name=datos_validados['nombre'],
         )
         Perfil.objects.create(
             usuario=usuario,
             carrera=datos_validados['carrera'],
             semestre=datos_validados['semestre'],
+            institucion=datos_validados['institucion'],
+            telefono=datos_validados['telefono'],
+            documento_identidad=datos_validados['documento_identidad'],
         )
         return usuario
+
+
+class SolicitarResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class ConfirmarResetSerializer(serializers.Serializer):
+    uidb64 = serializers.CharField()
+    token = serializers.CharField()
+    nueva_password = serializers.CharField(write_only=True, validators=[validate_password])
+    confirmar_password = serializers.CharField(write_only=True)
+
+    def validate(self, datos):
+        if datos['nueva_password'] != datos['confirmar_password']:
+            raise serializers.ValidationError({'confirmar_password': 'Las contraseñas no coinciden.'})
+        return datos
 
 
 class LoginConNombreView:

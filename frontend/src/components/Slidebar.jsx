@@ -1,14 +1,33 @@
-import { LayoutDashboard, LayoutGrid, Calendar, BarChart3, Settings, LogOut, ChevronDown } from 'lucide-react'
+import { House, LayoutGrid, Calendar, BarChart3, Settings, LogOut, PanelLeftClose } from 'lucide-react'
 
 const general = [
-  { id: 'inicio', etiqueta: 'Inicio', Icono: LayoutDashboard },
+  { id: 'inicio', etiqueta: 'Inicio', Icono: House },
   { id: 'kanban', etiqueta: 'Tablero', Icono: LayoutGrid },
   { id: 'calendario', etiqueta: 'Calendario', Icono: Calendar },
   { id: 'carga', etiqueta: 'Carga semanal', Icono: BarChart3 },
   { id: 'gestionar', etiqueta: 'Gestionar', Icono: Settings },
 ]
 
-function Sidebar({ activa, onCambiarPestaña, onLogout, asignaturas = [], filtroAsignatura, onSeleccionarAsignatura }) {
+const estiloSeccion = {
+  fontSize: '10.5px',
+  fontWeight: 600,
+  color: 'var(--sidebar-foreground)',
+  opacity: 0.6,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  padding: '0 8px',
+  marginBottom: '6px',
+}
+
+function Sidebar({
+  activa,
+  onCambiarPestaña,
+  onLogout,
+  onCerrar,
+  asignaturas = [],
+  filtroAsignatura,
+  onSeleccionarAsignatura,
+}) {
   const nombre = localStorage.getItem('nombre') || 'Estudiante'
   const inicial = nombre.trim().charAt(0).toUpperCase()
 
@@ -16,8 +35,7 @@ function Sidebar({ activa, onCambiarPestaña, onLogout, asignaturas = [], filtro
     <aside
       style={{
         width: 'var(--sidebar-w)',
-        flexShrink: 0,
-        height: '100vh',
+        height: '100%',
         background: 'var(--sidebar)',
         borderRight: '1px solid var(--sidebar-border)',
         display: 'flex',
@@ -26,17 +44,8 @@ function Sidebar({ activa, onCambiarPestaña, onLogout, asignaturas = [], filtro
         overflowY: 'auto',
       }}
     >
-      {/* Perfil */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '9px',
-          padding: '8px',
-          borderRadius: 'var(--radius-sm)',
-          marginBottom: '18px',
-        }}
-      >
+      {/* Perfil + botón para ocultar el menú */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '9px', padding: '4px 4px 4px 8px', marginBottom: '18px' }}>
         <div
           style={{
             width: '30px',
@@ -54,18 +63,52 @@ function Sidebar({ activa, onCambiarPestaña, onLogout, asignaturas = [], filtro
         >
           {inicial}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--sidebar-accent-foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {nombre.split(' ')[0]}
-          </div>
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            fontSize: '13px',
+            fontWeight: 600,
+            color: 'var(--sidebar-accent-foreground)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {nombre.split(' ')[0]}
         </div>
-        <ChevronDown size={14} color="var(--sidebar-foreground)" />
+        <button
+          onClick={onCerrar}
+          title="Ocultar menú"
+          aria-label="Ocultar menú"
+          style={{
+            width: '28px',
+            height: '28px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 'var(--radius-sm)',
+            border: 'none',
+            background: 'transparent',
+            color: 'var(--sidebar-foreground)',
+            flexShrink: 0,
+            transition: 'background-color 0.12s ease, color 0.12s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.07)'
+            e.currentTarget.style.color = 'var(--sidebar-accent-foreground)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent'
+            e.currentTarget.style.color = 'var(--sidebar-foreground)'
+          }}
+        >
+          <PanelLeftClose size={16} strokeWidth={1.9} />
+        </button>
       </div>
 
       {/* General */}
-      <div style={{ fontSize: '10.5px', fontWeight: 600, color: 'var(--sidebar-foreground)', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0 8px', marginBottom: '6px' }}>
-        General
-      </div>
+      <div style={estiloSeccion}>General</div>
       <nav style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '18px' }}>
         {general.map(({ id, etiqueta, Icono }) => {
           const esActiva = activa === id
@@ -77,7 +120,7 @@ function Sidebar({ activa, onCambiarPestaña, onLogout, asignaturas = [], filtro
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px',
-                padding: '8px 8px',
+                padding: '8px',
                 borderRadius: 'var(--radius-sm)',
                 border: 'none',
                 background: esActiva ? 'var(--sidebar-accent)' : 'transparent',
@@ -100,9 +143,7 @@ function Sidebar({ activa, onCambiarPestaña, onLogout, asignaturas = [], filtro
       {/* Mis cursos */}
       {asignaturas.length > 0 && (
         <>
-          <div style={{ fontSize: '10.5px', fontWeight: 600, color: 'var(--sidebar-foreground)', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0 8px', marginBottom: '6px' }}>
-            Mis cursos
-          </div>
+          <div style={estiloSeccion}>Mis cursos</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginBottom: '18px' }}>
             {asignaturas.map((a) => {
               const esActiva = filtroAsignatura === a.id
@@ -135,10 +176,9 @@ function Sidebar({ activa, onCambiarPestaña, onLogout, asignaturas = [], filtro
         </>
       )}
 
+      {/* Cuenta */}
       <div style={{ marginTop: 'auto' }}>
-        <div style={{ fontSize: '10.5px', fontWeight: 600, color: 'var(--sidebar-foreground)', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0 8px', marginBottom: '6px' }}>
-          Cuenta
-        </div>
+        <div style={estiloSeccion}>Cuenta</div>
         <button
           onClick={onLogout}
           style={{

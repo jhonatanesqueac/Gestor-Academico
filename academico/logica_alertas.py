@@ -1,5 +1,8 @@
 from datetime import timedelta
 from django.utils import timezone
+from django.core.mail import send_mail
+from django.conf import settings
+from twilio.rest import Client
 from .models import Tarea, Alerta
 
 
@@ -116,3 +119,62 @@ def ejecutar_revision_completa():
         'urgencia': len(urgencia),
         'cuellos_de_botella': len(cuellos),
     }
+
+
+def _enviar_correo(destinatario, alerta):
+    send_mail(
+        subject=f"[StudyFlow] {alerta.get_tipo_display()}",
+        message=alerta.mensaje,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[destinatario],
+        using='default',
+        fail_silently=False,
+    )
+
+
+def _enviar_whatsapp(numero, alerta):
+    # numero debe estar en formato E.164, ej: +573001234567
+    client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+    client.messages.create(
+        from_=f'whatsapp:{settings.TWILIO_WHATSAPP_FROM}',
+        to=f'whatsapp:{numero}',
+        body=alerta.mensaje,
+    )
+
+
+def enviar_alertas_pendientes():
+    """
+    Recorre las alertas generadas que todavía no se han enviado,
+    manda correo y/o WhatsApp según los datos disponibles del usuario,
+    y marca como enviadas las que lograron al menos un canal exitoso.
+    """
+    pendientes = Alerta.objects.filter(enviada=False).select_related(
+        'tarea__asignatura__usuario__perfil'
+    )
+    enviadas, fallidas = [], []
+
+    for alerta in pendientes:
+        usuario = alerta.tarea.asignatura.usuario
+        perfil = getattr(usuario, 'perfil', None)
+        algun_canal_ok = False
+
+        if usuario.email:
+            try:
+                _enviar_correo(usuario.email, alerta)
+                algun_canal_ok = True
+            except Exception as e:
+                fallidas.append((alerta, 'correo', str(e)))
+
+        if perfil and perfil.telefono:
+            try:
+                _enviar_whatsapp(perfil.telefono, alerta)
+                algun_canal_ok = True
+            except Exception as e:
+                fallidas.append((alerta, 'whatsapp', str(e)))
+
+        if algun_canal_ok:
+            alerta.enviada = True
+            alerta.save(update_fields=['enviada'])
+            enviadas.append(alerta)
+
+    return {'enviadas': len(enviadas), 'fallidas': fallidas}
