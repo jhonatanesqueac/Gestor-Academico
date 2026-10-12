@@ -6,6 +6,7 @@ import Calendario from '../components/Calendario'
 import GraficoCarga from '../components/GraficoCarga'
 import Gestionar from '../components/Gestionar'
 import Inicio from '../components/Inicio'
+import Historial from '../components/Historial'
 
 function Dashboard() {
   const [tareas, setTareas] = useState([])
@@ -98,7 +99,11 @@ function Dashboard() {
           onTareaEliminada={handleTareaEliminada}
           filtroAsignatura={filtroAsignatura}
           onQuitarFiltro={() => setFiltroAsignatura(null)}
+          onIrHistorial={() => setPestañaActiva('historial')}
         />
+      )}
+      {pestañaActiva === 'historial' && (
+        <Historial tareas={tareas} onTareaActualizada={handleTareaActualizada} onTareaEliminada={handleTareaEliminada} />
       )}
       {pestañaActiva === 'calendario' && <Calendario tareas={tareas} />}
       {pestañaActiva === 'carga' && <GraficoCarga tareas={tareas} />}

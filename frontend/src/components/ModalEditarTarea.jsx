@@ -1,6 +1,24 @@
 import { useState } from 'react'
 import api from '../api/axios'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 
+const etiquetasDificultad = { 1: 'Muy fácil', 2: 'Fácil', 3: 'Media', 4: 'Difícil', 5: 'Muy difícil' }
+
+const claseSelect =
+  'h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
+
+// Convierte "2026-09-18T15:52:25Z" (formato de Django) al formato que
+// necesita el input datetime-local: "2026-09-18T15:52", en tu hora local.
 function aFormatoInput(fechaISO) {
   const fecha = new Date(fechaISO)
   const offset = fecha.getTimezoneOffset()
@@ -8,12 +26,12 @@ function aFormatoInput(fechaISO) {
   return local.toISOString().slice(0, 16)
 }
 
-function ModalEditarTarea({ tarea, asignaturas, onGuardado, onCerrar }) {
-  const [asignaturaId, setAsignaturaId] = useState(tarea.asignatura)
+function Cuerpo({ tarea, asignaturas, onCerrar, onGuardado }) {
+  const [asignaturaId, setAsignaturaId] = useState(String(tarea.asignatura))
   const [titulo, setTitulo] = useState(tarea.titulo)
   const [fechaEntrega, setFechaEntrega] = useState(aFormatoInput(tarea.fecha_entrega))
-  const [dificultad, setDificultad] = useState(String(tarea.dificultad))
-  const [horasEstimadas, setHorasEstimadas] = useState(String(tarea.horas_estimadas))
+  const [dificultad, setDificultad] = useState(tarea.dificultad)
+  const [horas, setHoras] = useState(String(tarea.horas_estimadas))
   const [error, setError] = useState('')
   const [enviando, setEnviando] = useState(false)
 
@@ -25,125 +43,122 @@ function ModalEditarTarea({ tarea, asignaturas, onGuardado, onCerrar }) {
     try {
       const response = await api.patch(`tareas/${tarea.id}/`, {
         asignatura: parseInt(asignaturaId, 10),
-        titulo,
+        titulo: titulo.trim(),
         fecha_entrega: new Date(fechaEntrega).toISOString(),
-        dificultad: parseInt(dificultad, 10),
-        horas_estimadas: parseFloat(horasEstimadas),
+        dificultad,
+        horas_estimadas: parseFloat(horas),
       })
       onGuardado(response.data)
       onCerrar()
     } catch (err) {
       console.error('Error editando tarea:', err)
-      setError('No se pudo guardar. Revisa los datos.')
+      setError('No se pudo guardar. Revisa los datos e intenta de nuevo.')
     } finally {
       setEnviando(false)
     }
   }
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 100,
-      }}
-      onClick={onCerrar}
-    >
-      <div
-        className="tarjeta"
-        style={{
-          padding: '28px',
-          width: '400px',
-          maxWidth: '90%',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 style={{ marginTop: 0 }}>Editar tarea</h3>
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '14px' }}>
-            <label className="etiqueta-campo">Asignatura</label>
-            <select
-              value={asignaturaId}
-              onChange={(e) => setAsignaturaId(e.target.value)}
-              className="input-campo"
-            >
-              {asignaturas.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <DialogHeader>
+        <DialogTitle>Editar tarea</DialogTitle>
+        <DialogDescription>
+          Su nivel de criticidad se recalcula solo al guardar.
+        </DialogDescription>
+      </DialogHeader>
 
-          <div style={{ marginBottom: '14px' }}>
-            <label className="etiqueta-campo">Título</label>
-            <input
-              type="text"
-              value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
-              required
-              className="input-campo"
-            />
-          </div>
-
-          <div style={{ marginBottom: '14px' }}>
-            <label className="etiqueta-campo">Fecha de entrega</label>
-            <input
-              type="datetime-local"
-              value={fechaEntrega}
-              onChange={(e) => setFechaEntrega(e.target.value)}
-              required
-              className="input-campo"
-            />
-          </div>
-
-          <div style={{ marginBottom: '14px' }}>
-            <label className="etiqueta-campo">Dificultad</label>
-            <select
-              value={dificultad}
-              onChange={(e) => setDificultad(e.target.value)}
-              className="input-campo"
-            >
-              <option value="1">Muy fácil</option>
-              <option value="2">Fácil</option>
-              <option value="3">Media</option>
-              <option value="4">Difícil</option>
-              <option value="5">Muy difícil</option>
-            </select>
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label className="etiqueta-campo">Horas estimadas</label>
-            <input
-              type="number"
-              min="0.5"
-              step="0.5"
-              value={horasEstimadas}
-              onChange={(e) => setHorasEstimadas(e.target.value)}
-              className="input-campo"
-            />
-          </div>
-
-          {error && <p style={{ color: 'var(--color-rojo)', fontSize: '13px', marginBottom: '14px' }}>{error}</p>}
-
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button type="submit" disabled={enviando} className="btn btn-primario">
-              {enviando ? 'Guardando...' : 'Guardar cambios'}
-            </button>
-            <button type="button" onClick={onCerrar} className="btn btn-secundario">
-              Cancelar
-            </button>
-          </div>
-        </form>
+      <div className="grid gap-1.5">
+        <Label htmlFor="edit-asignatura">Asignatura</Label>
+        <select
+          id="edit-asignatura"
+          value={asignaturaId}
+          onChange={(e) => setAsignaturaId(e.target.value)}
+          required
+          className={claseSelect}
+        >
+          {asignaturas.map((a) => (
+            <option key={a.id} value={a.id}>{a.nombre}</option>
+          ))}
+        </select>
       </div>
-    </div>
+
+      <div className="grid gap-1.5">
+        <Label htmlFor="edit-titulo">Título</Label>
+        <Input id="edit-titulo" value={titulo} onChange={(e) => setTitulo(e.target.value)} required />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_7rem] gap-3">
+        <div className="grid gap-1.5">
+          <Label htmlFor="edit-fecha">Fecha de entrega</Label>
+          <Input
+            id="edit-fecha"
+            type="datetime-local"
+            value={fechaEntrega}
+            onChange={(e) => setFechaEntrega(e.target.value)}
+            required
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="edit-horas">Horas est.</Label>
+          <Input
+            id="edit-horas"
+            type="number"
+            min="0.5"
+            step="0.5"
+            value={horas}
+            onChange={(e) => setHoras(e.target.value)}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-1.5">
+        <Label>Dificultad</Label>
+        <div className="grid grid-cols-5 gap-1.5">
+          {[1, 2, 3, 4, 5].map((n) => {
+            const activo = dificultad === n
+            return (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setDificultad(n)}
+                aria-pressed={activo}
+                className="h-9 rounded-lg border text-sm font-medium num-tabular transition-colors"
+                style={{
+                  background: activo ? 'var(--primary)' : 'transparent',
+                  color: activo ? 'var(--primary-foreground)' : 'var(--foreground)',
+                  borderColor: activo ? 'var(--primary)' : 'var(--input)',
+                }}
+              >
+                {n}
+              </button>
+            )
+          })}
+        </div>
+        <p className="text-xs text-muted-foreground">{etiquetasDificultad[dificultad]}</p>
+      </div>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCerrar}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={enviando}>
+          {enviando ? 'Guardando...' : 'Guardar cambios'}
+        </Button>
+      </DialogFooter>
+    </form>
+  )
+}
+
+function ModalEditarTarea({ tarea, asignaturas, onGuardado, onCerrar }) {
+  return (
+    <Dialog open onOpenChange={(valor) => { if (!valor) onCerrar() }}>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <Cuerpo tarea={tarea} asignaturas={asignaturas} onCerrar={onCerrar} onGuardado={onGuardado} />
+      </DialogContent>
+    </Dialog>
   )
 }
 

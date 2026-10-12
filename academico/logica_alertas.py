@@ -110,14 +110,43 @@ def detectar_cuellos_de_botella():
 
     return alertas_creadas
 
+def generar_alertas_de_vencidas():
+    """
+    Revisa tareas cuya fecha de entrega ya pasó y que el estudiante no
+    marcó como terminadas. Genera una alerta única por tarea, porque esa
+    tarea ya no se muestra en el tablero (se movió al historial) y sin
+    esta alerta el estudiante podría no enterarse nunca de que quedó
+    pendiente.
+    """
+    ahora = timezone.now()
+    tareas_vencidas = Tarea.objects.exclude(estado=Tarea.Estado.TERMINADO).filter(fecha_entrega__lt=ahora)
+    alertas_creadas = []
+
+    for tarea in tareas_vencidas:
+        ya_existe = Alerta.objects.filter(tarea=tarea, tipo=Alerta.Tipo.VENCIDA).exists()
+        if ya_existe:
+            continue
+
+        alerta = Alerta.objects.create(
+            tarea=tarea,
+            tipo=Alerta.Tipo.VENCIDA,
+            mensaje=f'"{tarea.titulo}" venció sin marcarse como terminada. Revísala en Historial.',
+            fecha_disparo=ahora,
+        )
+        alertas_creadas.append(alerta)
+
+    return alertas_creadas
+
 
 def ejecutar_revision_completa():
-    """Punto de entrada único que corre ambas revisiones."""
+    """Punto de entrada único que corre las tres revisiones."""
     urgencia = generar_alertas_de_urgencia()
     cuellos = detectar_cuellos_de_botella()
+    vencidas = generar_alertas_de_vencidas()
     return {
         'urgencia': len(urgencia),
         'cuellos_de_botella': len(cuellos),
+        'vencidas': len(vencidas),
     }
 
 

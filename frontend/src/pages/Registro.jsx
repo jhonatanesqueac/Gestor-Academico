@@ -88,7 +88,7 @@ function Registro() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'var(--bg)',
+        background: 'var(--background)',
         padding: '20px',
       }}
     >

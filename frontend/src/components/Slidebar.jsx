@@ -1,10 +1,11 @@
-import { House, LayoutGrid, Calendar, BarChart3, Settings, LogOut, PanelLeftClose } from 'lucide-react'
+import { House, LayoutGrid, Calendar, BarChart3, History, Settings, LogOut, PanelLeftClose } from 'lucide-react'
 
 const general = [
   { id: 'inicio', etiqueta: 'Inicio', Icono: House },
   { id: 'kanban', etiqueta: 'Tablero', Icono: LayoutGrid },
   { id: 'calendario', etiqueta: 'Calendario', Icono: Calendar },
   { id: 'carga', etiqueta: 'Carga semanal', Icono: BarChart3 },
+  { id: 'historial', etiqueta: 'Historial', Icono: History },
   { id: 'gestionar', etiqueta: 'Gestionar', Icono: Settings },
 ]
 

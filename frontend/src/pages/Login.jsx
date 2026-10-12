@@ -38,7 +38,7 @@ function Login() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'var(--bg)',
+        background: 'var(--background)',
         padding: '20px',
       }}
     >
@@ -59,7 +59,7 @@ function Login() {
             <Workflow size={24} color="#c0acac" strokeWidth={2.1} />
           </div>
           <h1 style={{ fontSize: '25px', marginBottom: '2px' }}>StudyFlow</h1>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+          <p style={{ fontSize: '13px', color: 'var(--muted-foreground)' }}>
             Organiza tu semestre sin perder el control
           </p>
         </div>
@@ -94,8 +94,8 @@ function Login() {
             </Link>
           </p>
 
-          {error && (
-            <p style={{ color: 'var(--alerta)', fontSize: '12px', marginBottom: '16px' }}>{error}</p>
+                    {error && (
+            <p style={{ color: 'var(--destructive)', fontSize: '13px', marginBottom: '16px' }}>{error}</p>
           )}
 
           <button
@@ -109,7 +109,7 @@ function Login() {
           </button>
         </form>
 
-        <p style={{ marginTop: '20px', fontSize: '13px', textAlign: 'center', color: 'var(--text-muted)' }}>
+        <p style={{ marginTop: '20px', fontSize: '13px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
           ¿No tienes cuenta?{' '}
           <Link to="/registro" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
             Regístrate

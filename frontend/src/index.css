@@ -346,3 +346,60 @@ input, select, textarea {
     @apply font-sans;
   }
 }
+
+/* ---------- FullCalendar con los tokens del sistema ---------- */
+.calendario-studyflow .fc {
+  font-family: var(--font-texto);
+  --fc-border-color: var(--border);
+  --fc-today-bg-color: var(--accent);
+  --fc-neutral-bg-color: var(--muted);
+  --fc-list-event-hover-bg-color: var(--muted);
+  --fc-page-bg-color: transparent;
+}
+.calendario-studyflow .fc .fc-toolbar-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--foreground);
+  text-transform: capitalize;
+}
+.calendario-studyflow .fc .fc-button {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  box-shadow: none;
+  text-transform: capitalize;
+  padding: 5px 10px;
+  font-size: 12.5px;
+}
+.calendario-studyflow .fc .fc-button:hover {
+  background: var(--secondary);
+}
+.calendario-studyflow .fc .fc-button-primary:not(:disabled).fc-button-active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+}
+.calendario-studyflow .fc .fc-col-header-cell-cushion {
+  color: var(--muted-foreground);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 8px 0;
+}
+.calendario-studyflow .fc .fc-daygrid-day-number {
+  color: var(--foreground);
+  font-size: 12.5px;
+  padding: 6px;
+}
+.calendario-studyflow .fc-event {
+  border: none;
+  border-radius: 5px;
+  padding: 1px 0;
+}
+.calendario-studyflow .fc-list-event-title {
+  color: var(--foreground);
+}
+.calendario-studyflow .fc-list-day-cushion {
+  background: var(--muted) !important;
+}

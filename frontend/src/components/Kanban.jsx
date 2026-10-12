@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
+import { AlertTriangle, X } from 'lucide-react'
 import api from '../api/axios'
 import TarjetaTarea from './TarjetaTarea'
 import ModalEditarTarea from './ModalEditarTarea'
+import { esVencida, haPasadoSuDia } from '../lib/tareas'
 
 const columnas = [
   { estado: 'PENDIENTE', titulo: 'Pendiente' },
@@ -9,11 +11,12 @@ const columnas = [
   { estado: 'TERMINADO', titulo: 'Terminado' },
 ]
 
-function Kanban({ tareas, asignaturas, onTareaActualizada, onTareaEliminada, filtroAsignatura, onQuitarFiltro }) {
+function Kanban({ tareas, asignaturas, onTareaActualizada, onTareaEliminada, filtroAsignatura, onQuitarFiltro, onIrHistorial }) {
   const [errorMsg, setErrorMsg] = useState('')
   const [tareaEditando, setTareaEditando] = useState(null)
   const [columnaMovil, setColumnaMovil] = useState('PENDIENTE')
   const [esMovil, setEsMovil] = useState(() => window.innerWidth < 1024)
+  const [avisoCerrado, setAvisoCerrado] = useState(false)
 
   useEffect(() => {
     const alRedimensionar = () => setEsMovil(window.innerWidth < 1024)
@@ -35,7 +38,6 @@ function Kanban({ tareas, asignaturas, onTareaActualizada, onTareaEliminada, fil
   const handleEliminar = async (tareaId) => {
     const confirmar = window.confirm('¿Seguro que quieres eliminar esta tarea? No se puede deshacer.')
     if (!confirmar) return
-
     try {
       await api.delete(`tareas/${tareaId}/`)
       onTareaEliminada(tareaId)
@@ -46,9 +48,17 @@ function Kanban({ tareas, asignaturas, onTareaActualizada, onTareaEliminada, fil
   }
 
   const asignaturaFiltrada = asignaturas.find((a) => a.id === filtroAsignatura)
-  const tareasVisibles = filtroAsignatura
-    ? tareas.filter((t) => t.asignatura === filtroAsignatura)
-    : tareas
+  const base = filtroAsignatura ? tareas.filter((t) => t.asignatura === filtroAsignatura) : tareas
+  // El tablero solo muestra trabajo activo: ni lo terminado ni lo vencido
+  // sin marcar — eso vive en Historial, así esta vista nunca se llena de
+  // tareas sobre las que ya no hay nada que hacer aquí.
+  const tareasVisibles = base.filter((t) => !haPasadoSuDia(t))
+  const vencidasCount = base.filter(esVencida).length
+
+  // Si el conjunto de vencidas crece (aparece una nueva), vuelve a mostrar
+  // el aviso aunque la persona lo hubiera cerrado antes.
+  const [vencidasAlCerrar, setVencidasAlCerrar] = useState(0)
+  const mostrarAviso = vencidasCount > 0 && !(avisoCerrado && vencidasCount <= vencidasAlCerrar)
 
   return (
     <div>
@@ -64,18 +74,38 @@ function Kanban({ tareas, asignaturas, onTareaActualizada, onTareaEliminada, fil
           >
             {asignaturaFiltrada.nombre}
           </span>
-          <button
-            onClick={onQuitarFiltro}
-            className="text-muted-foreground hover:text-foreground text-[12.5px] underline"
-          >
+          <button onClick={onQuitarFiltro} className="text-muted-foreground hover:text-foreground text-[12.5px] underline">
             Ver todas
+          </button>
+        </div>
+      )}
+
+      {mostrarAviso && (
+        <div
+          className="w-full flex items-center gap-2.5 mb-4 px-3.5 py-2.5 rounded-lg"
+          style={{ background: 'var(--media-soft)', border: '1px solid color-mix(in oklab, var(--media) 35%, transparent)' }}
+        >
+          <AlertTriangle size={15} style={{ color: 'var(--media)' }} className="shrink-0" />
+          <button
+            onClick={onIrHistorial}
+            className="text-[12.5px] flex-1 text-left hover:underline"
+            style={{ color: 'color-mix(in oklab, var(--media) 70%, var(--foreground))' }}
+          >
+            {vencidasCount} {vencidasCount === 1 ? 'tarea venció' : 'tareas vencieron'} sin marcarse — revísalas en Historial
+          </button>
+          <button
+            onClick={() => { setAvisoCerrado(true); setVencidasAlCerrar(vencidasCount) }}
+            aria-label="Cerrar aviso"
+            className="shrink-0 rounded-md p-1 transition-colors hover:bg-black/5"
+            style={{ color: 'color-mix(in oklab, var(--media) 70%, var(--foreground))' }}
+          >
+            <X size={14} />
           </button>
         </div>
       )}
 
       {errorMsg && <p className="text-destructive text-sm mb-3">{errorMsg}</p>}
 
-      {/* Selector de columna — solo visible en móvil */}
       <div className="flex gap-1.5 mb-4 lg:hidden">
         {columnas.map((columna) => {
           const cantidad = tareasVisibles.filter((t) => t.estado === columna.estado).length
@@ -117,15 +147,17 @@ function Kanban({ tareas, asignaturas, onTareaActualizada, onTareaEliminada, fil
                 </div>
               )}
 
-              {tareasDeColumna.map((tarea) => (
-                <TarjetaTarea
-                  key={tarea.id}
-                  tarea={tarea}
-                  onCambiarEstado={handleCambiarEstado}
-                  onEditar={setTareaEditando}
-                  onEliminar={handleEliminar}
-                />
-              ))}
+              <div className="max-h-[calc(100vh-280px)] overflow-y-auto pr-1 -mr-1">
+                {tareasDeColumna.map((tarea) => (
+                  <TarjetaTarea
+                    key={tarea.id}
+                    tarea={tarea}
+                    onCambiarEstado={handleCambiarEstado}
+                    onEditar={setTareaEditando}
+                    onEliminar={handleEliminar}
+                  />
+                ))}
+              </div>
             </div>
           )
         })}

@@ -118,6 +118,7 @@ class Alerta(models.Model):
         RECORDATORIO = 'RECORDATORIO', 'Recordatorio simple'
         CUELLO_BOTELLA = 'CUELLO_BOTELLA', 'Cuello de botella detectado'
         URGENTE = 'URGENTE', 'Entrega urgente'
+        VENCIDA = 'VENCIDA', 'Tarea vencida sin marcar'
 
     tarea = models.ForeignKey(Tarea, on_delete=models.CASCADE, related_name='alertas')
     tipo = models.CharField(max_length=20, choices=Tipo.choices, default=Tipo.RECORDATORIO)
