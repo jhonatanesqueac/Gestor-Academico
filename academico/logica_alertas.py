@@ -1,209 +1,136 @@
 from datetime import timedelta
 from django.utils import timezone
-from django.core.mail import send_mail
-from django.conf import settings
-from twilio.rest import Client
 from .models import Tarea, Alerta
 
 
-# Umbrales configurables: a partir de cuántos días antes se dispara cada tipo de alerta
-DIAS_RECORDATORIO = 3   # avisa 3 días antes
-DIAS_URGENTE = 1        # avisa 1 día antes (o menos) con tono más fuerte
-MIN_TAREAS_CUELLO_BOTELLA = 3   # si hay 3 o más entregas juntas...
-VENTANA_CUELLO_BOTELLA_DIAS = 4  # ...dentro de 4 días, es un cuello de botella
+# Umbrales configurables
+HORAS_RECORDATORIO = 72          # avisa desde 3 días antes
+HORAS_URGENTE = 24               # el último día, con tono más fuerte
+MIN_TAREAS_CUELLO_BOTELLA = 3    # 3 o más entregas juntas...
+VENTANA_CUELLO_BOTELLA_DIAS = 4  # ...dentro de 4 días = cuello de botella
 
 
-def generar_alertas_de_urgencia():
-    """
-    Revisa las tareas pendientes o en proceso. Si están a punto de vencer
-    y todavía no se les generó una alerta de ese tipo, crea una nueva.
-    """
+def _tareas_activas(usuario=None):
+    """Tareas sin terminar. Si se pasa un usuario, solo las suyas."""
+    tareas = Tarea.objects.exclude(estado=Tarea.Estado.TERMINADO).select_related('asignatura')
+    if usuario is not None:
+        tareas = tareas.filter(asignatura__usuario=usuario)
+    return tareas
+
+
+def _texto_plazo(horas):
+    if horas < 1:
+        return 'en menos de una hora'
+    if horas < 24:
+        h = int(horas)
+        return f'en {h} hora' + ('' if h == 1 else 's')
+    d = int(horas // 24)
+    return f'en {d} día' + ('' if d == 1 else 's')
+
+
+def _fin_del_dia(fecha):
+    """23:59:59 del día de entrega, en hora local (igual que el Tablero)."""
+    local = timezone.localtime(fecha)
+    return local.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+
+def _crear_si_no_existe(tarea, tipo, mensaje):
+    """Una sola alerta por tarea y tipo, aunque la revisión corra mil veces."""
+    alerta, creada = Alerta.objects.get_or_create(
+        tarea=tarea,
+        tipo=tipo,
+        defaults={'mensaje': mensaje, 'fecha_disparo': timezone.now()},
+    )
+    return alerta if creada else None
+
+
+def marcar_alertas_obsoletas(usuario=None):
+    """Si la tarea ya se terminó, su alerta pendiente deja de tener sentido."""
+    alertas = Alerta.objects.filter(enviada=False, tarea__estado=Tarea.Estado.TERMINADO)
+    if usuario is not None:
+        alertas = alertas.filter(tarea__asignatura__usuario=usuario)
+    return alertas.update(enviada=True)
+
+
+def generar_alertas_de_urgencia(usuario=None):
     ahora = timezone.now()
-    tareas_activas = Tarea.objects.exclude(estado=Tarea.Estado.TERMINADO)
-    alertas_creadas = []
+    creadas = []
 
-    for tarea in tareas_activas:
-        dias_restantes = (tarea.fecha_entrega - ahora).days
+    for tarea in _tareas_activas(usuario):
+        horas = (tarea.fecha_entrega - ahora).total_seconds() / 3600
+        if horas < 0:
+            continue  # ya pasó la hora de entrega; eso lo cubre "vencida"
 
-        if dias_restantes < 0:
-            continue  # ya venció, no tiene sentido alertar por adelantado
-
-        # Decidimos qué tipo de alerta corresponde según cuán cerca está la entrega
-        if dias_restantes <= DIAS_URGENTE:
+        if horas <= HORAS_URGENTE:
             tipo = Alerta.Tipo.URGENTE
-            mensaje = f'"{tarea.titulo}" vence muy pronto (en {dias_restantes} día(s) o menos).'
-        elif dias_restantes <= DIAS_RECORDATORIO:
+        elif horas <= HORAS_RECORDATORIO:
             tipo = Alerta.Tipo.RECORDATORIO
-            mensaje = f'"{tarea.titulo}" vence en {dias_restantes} día(s).'
         else:
-            continue  # todavía falta mucho, no generamos alerta aún
-
-        # Evitamos duplicar: si ya existe una alerta de este tipo para esta
-        # tarea, no creamos otra igual cada vez que corre el comando.
-        ya_existe = Alerta.objects.filter(tarea=tarea, tipo=tipo).exists()
-        if ya_existe:
             continue
 
-        alerta = Alerta.objects.create(
-            tarea=tarea,
-            tipo=tipo,
-            mensaje=mensaje,
-            fecha_disparo=ahora,
-        )
-        alertas_creadas.append(alerta)
+        alerta = _crear_si_no_existe(tarea, tipo, f'"{tarea.titulo}" vence {_texto_plazo(horas)}.')
+        if alerta:
+            creadas.append(alerta)
 
-    return alertas_creadas
+    return creadas
 
 
-def detectar_cuellos_de_botella():
-    """
-    Agrupa las tareas activas por estudiante. Si un estudiante tiene
-    varias tareas venciendo en una ventana corta de días, genera UNA
-    alerta especial avisando del cuello de botella (en vez de una
-    alerta separada por cada tarea, que sería repetitivo).
-    """
+def detectar_cuellos_de_botella(usuario=None):
+    """Varias entregas juntas = UNA sola alerta combinada por estudiante."""
     ahora = timezone.now()
     limite = ahora + timedelta(days=VENTANA_CUELLO_BOTELLA_DIAS)
+    proximas = _tareas_activas(usuario).filter(fecha_entrega__gte=ahora, fecha_entrega__lte=limite)
 
-    tareas_proximas = Tarea.objects.exclude(estado=Tarea.Estado.TERMINADO).filter(
-        fecha_entrega__gte=ahora,
-        fecha_entrega__lte=limite,
-    ).select_related('asignatura__usuario')
+    por_usuario = {}
+    for tarea in proximas:
+        por_usuario.setdefault(tarea.asignatura.usuario_id, []).append(tarea)
 
-    # Agrupamos manualmente por usuario, ya que una tarea no tiene el
-    # usuario directo, sino a través de su asignatura.
-    tareas_por_usuario = {}
-    for tarea in tareas_proximas:
-        usuario_id = tarea.asignatura.usuario_id
-        tareas_por_usuario.setdefault(usuario_id, []).append(tarea)
-
-    alertas_creadas = []
-
-    for usuario_id, tareas_del_usuario in tareas_por_usuario.items():
+    creadas = []
+    for tareas_del_usuario in por_usuario.values():
         if len(tareas_del_usuario) < MIN_TAREAS_CUELLO_BOTELLA:
-            continue  # no es suficiente para considerarlo un cuello de botella
-
-        # Usamos la tarea más próxima a vencer como "ancla" de la alerta,
-        # para no crear una alerta de cuello de botella duplicada cada
-        # vez que corre el comando mientras las mismas tareas siguen activas.
-        tarea_ancla = min(tareas_del_usuario, key=lambda t: t.fecha_entrega)
-
-        ya_existe = Alerta.objects.filter(
-            tarea=tarea_ancla, tipo=Alerta.Tipo.CUELLO_BOTELLA
-        ).exists()
-        if ya_existe:
             continue
 
+        # La tarea más próxima sirve de "ancla" para no repetir la alerta
+        ancla = min(tareas_del_usuario, key=lambda t: t.fecha_entrega)
         titulos = ', '.join(t.titulo for t in tareas_del_usuario)
         mensaje = (
             f'Tienes {len(tareas_del_usuario)} entregas en los próximos '
             f'{VENTANA_CUELLO_BOTELLA_DIAS} días: {titulos}.'
         )
 
-        alerta = Alerta.objects.create(
-            tarea=tarea_ancla,
-            tipo=Alerta.Tipo.CUELLO_BOTELLA,
-            mensaje=mensaje,
-            fecha_disparo=ahora,
-        )
-        alertas_creadas.append(alerta)
+        alerta = _crear_si_no_existe(ancla, Alerta.Tipo.CUELLO_BOTELLA, mensaje)
+        if alerta:
+            creadas.append(alerta)
 
-    return alertas_creadas
+    return creadas
 
-def generar_alertas_de_vencidas():
-    """
-    Revisa tareas cuya fecha de entrega ya pasó y que el estudiante no
-    marcó como terminadas. Genera una alerta única por tarea, porque esa
-    tarea ya no se muestra en el tablero (se movió al historial) y sin
-    esta alerta el estudiante podría no enterarse nunca de que quedó
-    pendiente.
-    """
+
+def generar_alertas_de_vencidas(usuario=None):
+    """Misma regla que el Tablero: vencida = terminó su día sin marcarse."""
     ahora = timezone.now()
-    tareas_vencidas = Tarea.objects.exclude(estado=Tarea.Estado.TERMINADO).filter(fecha_entrega__lt=ahora)
-    alertas_creadas = []
+    creadas = []
 
-    for tarea in tareas_vencidas:
-        ya_existe = Alerta.objects.filter(tarea=tarea, tipo=Alerta.Tipo.VENCIDA).exists()
-        if ya_existe:
-            continue
+    for tarea in _tareas_activas(usuario).filter(fecha_entrega__lt=ahora):
+        if _fin_del_dia(tarea.fecha_entrega) >= ahora:
+            continue  # todavía es el día de la entrega
 
-        alerta = Alerta.objects.create(
-            tarea=tarea,
-            tipo=Alerta.Tipo.VENCIDA,
-            mensaje=f'"{tarea.titulo}" venció sin marcarse como terminada. Revísala en Historial.',
-            fecha_disparo=ahora,
-        )
-        alertas_creadas.append(alerta)
+        mensaje = f'"{tarea.titulo}" venció sin marcarse como terminada. Revísala en Historial.'
+        alerta = _crear_si_no_existe(tarea, Alerta.Tipo.VENCIDA, mensaje)
+        if alerta:
+            creadas.append(alerta)
 
-    return alertas_creadas
+    return creadas
 
 
-def ejecutar_revision_completa():
-    """Punto de entrada único que corre las tres revisiones."""
-    urgencia = generar_alertas_de_urgencia()
-    cuellos = detectar_cuellos_de_botella()
-    vencidas = generar_alertas_de_vencidas()
+def ejecutar_revision_completa(usuario=None):
+    """Sin usuario revisa a todos (comando manual); con usuario, solo a esa persona."""
+    obsoletas = marcar_alertas_obsoletas(usuario)
+    urgencia = generar_alertas_de_urgencia(usuario)
+    cuellos = detectar_cuellos_de_botella(usuario)
+    vencidas = generar_alertas_de_vencidas(usuario)
     return {
         'urgencia': len(urgencia),
         'cuellos_de_botella': len(cuellos),
         'vencidas': len(vencidas),
+        'obsoletas': obsoletas,
     }
-
-
-def _enviar_correo(destinatario, alerta):
-    send_mail(
-        subject=f"[StudyFlow] {alerta.get_tipo_display()}",
-        message=alerta.mensaje,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[destinatario],
-        using='default',
-        fail_silently=False,
-    )
-
-
-def _enviar_whatsapp(numero, alerta):
-    # numero debe estar en formato E.164, ej: +573001234567
-    client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-    client.messages.create(
-        from_=f'whatsapp:{settings.TWILIO_WHATSAPP_FROM}',
-        to=f'whatsapp:{numero}',
-        body=alerta.mensaje,
-    )
-
-
-def enviar_alertas_pendientes():
-    """
-    Recorre las alertas generadas que todavía no se han enviado,
-    manda correo y/o WhatsApp según los datos disponibles del usuario,
-    y marca como enviadas las que lograron al menos un canal exitoso.
-    """
-    pendientes = Alerta.objects.filter(enviada=False).select_related(
-        'tarea__asignatura__usuario__perfil'
-    )
-    enviadas, fallidas = [], []
-
-    for alerta in pendientes:
-        usuario = alerta.tarea.asignatura.usuario
-        perfil = getattr(usuario, 'perfil', None)
-        algun_canal_ok = False
-
-        if usuario.email:
-            try:
-                _enviar_correo(usuario.email, alerta)
-                algun_canal_ok = True
-            except Exception as e:
-                fallidas.append((alerta, 'correo', str(e)))
-
-        if perfil and perfil.telefono:
-            try:
-                _enviar_whatsapp(perfil.telefono, alerta)
-                algun_canal_ok = True
-            except Exception as e:
-                fallidas.append((alerta, 'whatsapp', str(e)))
-
-        if algun_canal_ok:
-            alerta.enviada = True
-            alerta.save(update_fields=['enviada'])
-            enviadas.append(alerta)
-
-    return {'enviadas': len(enviadas), 'fallidas': fallidas}

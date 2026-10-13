@@ -13,6 +13,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.exceptions import TokenError
 from .models import Perfil, Asignatura, Tarea, Alerta
+from .logica_alertas import ejecutar_revision_completa
 from .serializers import (
     PerfilSerializer, AsignaturaSerializer, TareaSerializer, AlertaSerializer,
     RegistroSerializer, SolicitarResetSerializer, ConfirmarResetSerializer,
@@ -96,7 +97,18 @@ class AlertaViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Alerta.objects.filter(tarea__asignatura__usuario=self.request.user)
+        # Sin leer primero, y lo más reciente arriba
+        return (
+            Alerta.objects.filter(tarea__asignatura__usuario=self.request.user)
+            .order_by('enviada', '-creado_en')
+        )
+
+    def list(self, request, *args, **kwargs):
+        # Antes de responder, revisa las tareas de ESTA persona y genera
+        # las alertas que falten: el sistema se vuelve proactivo sin
+        # depender de que alguien corra un comando a mano.
+        ejecutar_revision_completa(request.user)
+        return super().list(request, *args, **kwargs)
 
 
 class PerfilViewSet(viewsets.ModelViewSet):
