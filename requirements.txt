@@ -5,7 +5,7 @@ django-cors-headers==4.9.0
 django-csp==4.0
 django-ratelimit==4.1.0
 django-redis==7.0.0
-djangorestframework==3.18.1
+djangorestframework==3.18.3
 djangorestframework_simplejwt==5.5.1
 packaging==26.3
 psycopg2-binary==2.9.13
