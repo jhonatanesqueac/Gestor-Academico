@@ -2,14 +2,21 @@ import logging
 import re
 from django.conf import settings
 from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import viewsets, permissions, generics, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.exceptions import TokenError
 from .models import Perfil, Asignatura, Tarea, Alerta
+from .logica_alertas import ejecutar_revision_completa
 from .serializers import (
-    PerfilSerializer, AsignaturaSerializer, TareaSerializer, AlertaSerializer, RegistroSerializer,
+    PerfilSerializer, AsignaturaSerializer, TareaSerializer, AlertaSerializer,
+     MiPerfilSerializer, CambiarPasswordSerializer,RegistroSerializer, SolicitarResetSerializer, ConfirmarResetSerializer,
 )
 
 logger = logging.getLogger('seguridad')
@@ -90,15 +97,49 @@ class AlertaViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Alerta.objects.filter(tarea__asignatura__usuario=self.request.user)
+        # Sin leer primero, y lo más reciente arriba
+        return (
+            Alerta.objects.filter(tarea__asignatura__usuario=self.request.user)
+            .order_by('enviada', '-creado_en')
+        )
+
+    def list(self, request, *args, **kwargs):
+        # Antes de responder, revisa las tareas de ESTA persona y genera
+        # las alertas que falten: el sistema se vuelve proactivo sin
+        # depender de que alguien corra un comando a mano.
+        ejecutar_revision_completa(request.user)
+        return super().list(request, *args, **kwargs)
 
 
-class PerfilViewSet(viewsets.ModelViewSet):
-    serializer_class = PerfilSerializer
+class MiPerfilView(generics.RetrieveUpdateAPIView):
+    """
+    El perfil de quien está logueado. No recibe un id por la URL: siempre es
+    el suyo, así nadie puede ver ni editar el perfil de otra persona.
+    """
+    serializer_class = MiPerfilSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        return Perfil.objects.filter(usuario=self.request.user)
+    def get_object(self):
+        # Quien se creó con createsuperuser (como tu "admin") aún no tiene
+        # Perfil: get_or_create se lo crea la primera vez que entra.
+        perfil, _ = Perfil.objects.get_or_create(usuario=self.request.user)
+        return perfil
+
+
+class CambiarPasswordView(generics.GenericAPIView):
+    serializer_class = CambiarPasswordSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        usuario = request.user
+        usuario.set_password(serializer.validated_data['password_nueva'])
+        usuario.save()
+
+        logger.info('Contraseña cambiada desde el perfil: %s', usuario.username)
+        return Response({'detail': 'Contraseña actualizada correctamente.'})
 
 
 
@@ -115,6 +156,7 @@ class RegistroView(generics.CreateAPIView):
     inicie sesión de nuevo justo después de registrarse.
     """
     serializer_class = RegistroSerializer
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
 
     def create(self, request, *args, **kwargs):
@@ -140,11 +182,13 @@ class RegistroView(generics.CreateAPIView):
 
 @method_decorator(ratelimit(key='ip', rate='5/m', block=True), name='post')
 class LoginView(generics.GenericAPIView):
+    
     """
     Reemplaza al obtain_auth_token por defecto de DRF para poder
     devolver, además del token, el nombre del estudiante —
     así React puede saludarlo sin hacer una segunda petición.
     """
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
 
     def post(self, request, *args, **kwargs):
@@ -179,9 +223,13 @@ class LogoutView(generics.GenericAPIView):
     Invalida el refresh token del lado del servidor (lo mete a la
     blacklist), para que aunque alguien lo haya robado antes del
     logout, no lo pueda seguir usando para sacar nuevos access tokens.
-    También borra la cookie httpOnly donde vivía.
+    también borra la cookie httpOnly donde vivía.
+
+    Es pública a propósito: debe funcionar aunque el access token ya
+    haya vencido. La cookie del refresh es la que identifica la sesión.
     """
-    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get(settings.REFRESH_COOKIE_NAME)
@@ -200,14 +248,14 @@ class LogoutView(generics.GenericAPIView):
             token.blacklist()
         except TokenError:
             logger.warning(
-                'Intento de logout con token inválido/expirado: %s (IP: %s)',
-                request.user.username, obtener_ip_cliente(request),
+                'Intento de logout con token inválido/expirado (IP: %s)',
+                obtener_ip_cliente(request),
             )
             return response
 
         logger.info(
-            'Logout: %s (IP: %s)',
-            request.user.username, obtener_ip_cliente(request),
+            'Logout: usuario id %s (IP: %s)',
+            token['user_id'], obtener_ip_cliente(request),
         )
         return response
 
@@ -219,6 +267,7 @@ class RefreshView(generics.GenericAPIView):
     httpOnly. Con ROTATE_REFRESH_TOKENS=True, cada renovación genera
     un refresh nuevo, así que también actualizamos la cookie.
     """
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
     # Se llama automáticamente en cada carga de página (silent
     # refresh) y solo funciona con una cookie httpOnly válida, que
@@ -252,3 +301,80 @@ class RefreshView(generics.GenericAPIView):
             set_refresh_cookie(response, nuevo_refresh)
 
         return response
+
+
+@method_decorator(ratelimit(key='ip', rate='5/m', block=True), name='post')
+class SolicitarResetPasswordView(generics.GenericAPIView):
+    """
+    Recibe un email y, SI existe un usuario con ese correo, le manda un
+    link con un token de un solo uso para restablecer su contraseña.
+    Responde el mismo mensaje genérico exista o no el correo, para que
+    este endpoint no sirva para adivinar qué correos están registrados.
+    """
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+    serializer_class = SolicitarResetSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+        ip = obtener_ip_cliente(request)
+
+        usuario = User.objects.filter(email__iexact=email).first()
+        if usuario and usuario.email:
+            uid = urlsafe_base64_encode(force_bytes(usuario.pk))
+            token = default_token_generator.make_token(usuario)
+            link = f'{settings.FRONTEND_URL}/restablecer-password/{uid}/{token}/'
+            send_mail(
+                subject='Restablece tu contraseña - Gestor Académico',
+                message=(
+                    f'Hola {usuario.first_name or usuario.username},\n\n'
+                    f'Haz clic en el siguiente enlace para restablecer tu contraseña:\n{link}\n\n'
+                    'Si no solicitaste esto, ignora este correo.'
+                ),
+                from_email=None,
+                recipient_list=[usuario.email],
+            )
+            logger.info('Solicitud de reset de contraseña: %s (IP: %s)', usuario.username, ip)
+        else:
+            logger.info('Solicitud de reset para correo no registrado: %s (IP: %s)', email, ip)
+
+        return Response({
+            'detail': 'Si el correo está registrado, te llegará un enlace para restablecer tu contraseña.',
+        })
+
+
+class ConfirmarResetPasswordView(generics.GenericAPIView):
+    """
+    Valida el token del link recibido por correo y, si es válido,
+    cambia la contraseña. El token es de un solo uso (Django invalida
+    automáticamente el token viejo apenas la contraseña cambia).
+    """
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+    serializer_class = ConfirmarResetSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        datos = serializer.validated_data
+        ip = obtener_ip_cliente(request)
+
+        try:
+            uid = force_str(urlsafe_base64_decode(datos['uidb64']))
+            usuario = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            usuario = None
+
+        if usuario is None or not default_token_generator.check_token(usuario, datos['token']):
+            logger.warning('Intento de reset de contraseña con token inválido (IP: %s)', ip)
+            return Response(
+                {'detail': 'El enlace no es válido o ya expiró.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        usuario.set_password(datos['nueva_password'])
+        usuario.save()
+        logger.info('Contraseña restablecida: %s (IP: %s)', usuario.username, ip)
+        return Response({'detail': 'Contraseña actualizada correctamente.'})

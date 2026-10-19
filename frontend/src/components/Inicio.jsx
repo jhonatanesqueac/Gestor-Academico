@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Plus, ArrowRight, ListChecks, Clock, CalendarClock, TrendingUp } from 'lucide-react'
 import api from '../api/axios'
 import AnilloCriticidad from './AnilloCriticidad'
+import { esVencida } from '../lib/tareas'
 
 function datosSemana(tareas) {
   const hoy = new Date()
@@ -107,7 +108,7 @@ function FilaVencimiento({ tarea }) {
 }
 
 function Inicio({ tareas, onTareaActualizada, onCambiarPestaña }) {
-  const activas = tareas.filter((t) => t.estado !== 'TERMINADO')
+  const activas = tareas.filter((t) => t.estado !== 'TERMINADO' && !esVencida(t))
   const destacada = activas[0]
   const resumen = activas.slice(1, 5)
   const proximos = [...activas].sort((a, b) => new Date(a.fecha_entrega) - new Date(b.fecha_entrega)).slice(0, 7)

@@ -160,7 +160,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'es'
 
 TIME_ZONE = 'America/Bogota'
 
@@ -178,11 +178,41 @@ STATIC_URL = 'static/'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+# Independiente de DEBUG: esto decide si el correo sale de verdad o
+# solo se imprime en consola. Así puedes hacer la demo en local con
+# envío real, sin tener que desplegar a producción.
+ENVIAR_CORREOS_REALES = config('ENVIAR_CORREOS_REALES', default=False, cast=bool)
+
+if ENVIAR_CORREOS_REALES:
+    MAILERS = {
+        'default': {
+            'BACKEND': 'django.core.mail.backends.smtp.EmailBackend',
+            'OPTIONS': {
+                'host': config('EMAIL_HOST'),
+                'port': config('EMAIL_PORT', default=587, cast=int),
+                'username': config('EMAIL_HOST_USER'),
+                'password': config('EMAIL_HOST_PASSWORD'),
+                'use_tls': config('EMAIL_USE_TLS', default=True, cast=bool),
+            },
+        },
+    }
+else:
+    MAILERS = {
+        'default': {
+            'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+        },
+    }
+
+# WhatsApp / SMS vía Twilio
+TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID', default='')
+TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN', default='')
+TWILIO_WHATSAPP_FROM = config('TWILIO_WHATSAPP_FROM', default='')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='no-reply@gestoracademico.local')
+
+# Usada para construir el link que se manda por correo al pedir un
+# reset de contraseña (ej. http://localhost:5173/restablecer-password/...).
+# En producción, cambia esto en el .env al dominio real de Vercel.
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
 
 
 if DEBUG:

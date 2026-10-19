@@ -1,46 +1,62 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bell, Menu } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import Sidebar from './Slidebar'
-import api from '../api/axios'
 import { useAuth } from '../context/useAuth'
 
-function Layout({ activa, onCambiarPestaña, children, alertas = [], onMarcarLeida, asignaturas = [], filtroAsignatura, onSeleccionarAsignatura }) {
+const PUNTO_CORTE = 1024
+
+function Layout({
+  activa,
+  onCambiarPestaña,
+  children,
+   alertas = [],
+  perfil,
+  onMarcarLeida,
+  asignaturas = [],
+  filtroAsignatura,
+  onSeleccionarAsignatura,
+}) {
   const navigate = useNavigate()
   const { cerrarSesion } = useAuth()
   const [mostrarAlertas, setMostrarAlertas] = useState(false)
-  const [sidebarAbierto, setSidebarAbierto] = useState(() => window.innerWidth >= 1024)
-  const nombre = localStorage.getItem('nombre') || 'Estudiante'
+  const [esMovil, setEsMovil] = useState(() => window.innerWidth < PUNTO_CORTE)
+  const [sidebarAbierto, setSidebarAbierto] = useState(() => window.innerWidth >= PUNTO_CORTE)
+  const nombre = perfil?.nombre || localStorage.getItem('nombre') || 'Estudiante'
 
-  // Si la persona ensancha la ventana de vuelta a escritorio, reabre el
-  // sidebar automáticamente; si la angosta a móvil, lo cierra solo.
+  // Solo reacciona cuando la ventana CRUZA el punto de corte, así un ajuste
+  // pequeño de tamaño no reabre un menú que la persona cerró a propósito.
   useEffect(() => {
-    const alRedimensionar = () => setSidebarAbierto(window.innerWidth >= 1024)
+    let eraMovil = window.innerWidth < PUNTO_CORTE
+    const alRedimensionar = () => {
+      const esAhoraMovil = window.innerWidth < PUNTO_CORTE
+      if (esAhoraMovil !== eraMovil) {
+        eraMovil = esAhoraMovil
+        setEsMovil(esAhoraMovil)
+        setSidebarAbierto(!esAhoraMovil)
+      }
+    }
     window.addEventListener('resize', alRedimensionar)
     return () => window.removeEventListener('resize', alRedimensionar)
   }, [])
 
-  // En pantallas angostas, cierra el sidebar automáticamente después de
-  // elegir una pestaña — así no tapa el contenido tras navegar.
-  const handleCambiarPestaña = (id) => {
-    onCambiarPestaña(id)
-    if (window.innerWidth < 1024) setSidebarAbierto(false)
+  const handleLogout = async () => {
+    // Avisa al backend (borra la cookie del refresh) y limpia el estado.
+    await cerrarSesion()
+    localStorage.removeItem('nombre')
+    navigate('/login')
   }
 
-  const handleLogout = async () => {
-    try {
-      // El backend lee el refresh token directamente de la cookie
-      // httpOnly -- ya no hace falta que se lo mandemos nosotros.
-      await api.post('auth/logout/', {})
-    } catch (err) {
-      // Si falla (token ya vencido, sin conexión, etc.) no pasa nada
-      // grave: igual limpiamos la sesión local del usuario.
-      console.error('No se pudo invalidar el refresh token:', err)
-    } finally {
-      localStorage.removeItem('nombre')
-      cerrarSesion()
-      navigate('/login')
-    }
+  // En móvil el menú flota sobre el contenido: se cierra solo tras elegir algo.
+  const handleCambiarPestaña = (id) => {
+    onCambiarPestaña(id)
+    if (esMovil) setSidebarAbierto(false)
+  }
+
+  const handleSeleccionarAsignatura = (id) => {
+    onSeleccionarAsignatura(id)
+    if (esMovil) setSidebarAbierto(false)
   }
 
   const alertasSinLeer = alertas.filter((a) => !a.enviada)
@@ -54,84 +70,71 @@ function Layout({ activa, onCambiarPestaña, children, alertas = [], onMarcarLei
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-             {sidebarAbierto && (
-        <div
-          onClick={() => setSidebarAbierto(false)}
-          className="fixed inset-0 bg-black/40 z-30 lg:hidden"
-        />
+      {esMovil && sidebarAbierto && (
+        <div className="fixed inset-0 bg-black/40 z-30" onClick={() => setSidebarAbierto(false)} />
       )}
 
       <div
+        inert={!sidebarAbierto}
         style={{
-          position: window.innerWidth < 1024 ? 'fixed' : 'sticky',
+          position: esMovil ? 'fixed' : 'sticky',
           top: 0,
           left: 0,
           height: '100vh',
           zIndex: 40,
-          transform: sidebarAbierto ? 'translateX(0)' : 'translateX(-100%)',
-          transition: 'transform 0.2s ease',
+          flexShrink: 0,
+          overflow: 'hidden',
+          width: esMovil || sidebarAbierto ? 'var(--sidebar-w)' : 0,
+          transform: esMovil && !sidebarAbierto ? 'translateX(-100%)' : 'none',
+          transition: 'width 0.2s ease, transform 0.2s ease',
         }}
       >
         <Sidebar
           activa={activa}
           onCambiarPestaña={handleCambiarPestaña}
           onLogout={handleLogout}
+          onCerrar={() => setSidebarAbierto(false)}
           asignaturas={asignaturas}
           filtroAsignatura={filtroAsignatura}
-          onSeleccionarAsignatura={onSeleccionarAsignatura}
+          perfil={perfil}
+          onSeleccionarAsignatura={handleSeleccionarAsignatura}
         />
       </div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <header
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '18px 32px',
-            borderBottom: '1px solid var(--border)',
-            position: 'sticky',
-            top: 0,
-            background: 'var(--background)',
-            zIndex: 20,
-          }}
+          className="sticky top-0 z-20 flex items-center justify-between gap-3 px-4 py-4 lg:px-8 border-b"
+          style={{ background: 'var(--background)' }}
         >
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarAbierto(!sidebarAbierto)}
-              className="btn-secundario shrink-0"
-              style={{ borderRadius: 'var(--radius-sm)', padding: '8px 9px', border: '1px solid var(--border)', background: 'var(--card)' }}
-            >
-              <Menu size={17} strokeWidth={1.9} />
-            </button>
-            <div>
-              <h1>{saludo()}, {nombre.split(' ')[0]}</h1>
-              <p style={{ fontSize: '13px', color: 'var(--muted-foreground)', marginTop: '2px' }}>
-                Esto es lo que tienes pendiente hoy.
-              </p>
+          <div className="flex items-center gap-3 min-w-0">
+            {!sidebarAbierto && (
+              <Button variant="outline" size="icon" aria-label="Mostrar menú" onClick={() => setSidebarAbierto(true)}>
+                <Menu size={16} />
+              </Button>
+            )}
+            <div className="min-w-0">
+              <h1 className="truncate">
+                {saludo()}, {nombre.split(' ')[0]}
+              </h1>
+              <p className="text-[13px] text-muted-foreground mt-0.5">Esto es lo que tienes pendiente hoy.</p>
             </div>
           </div>
 
-          <div style={{ position: 'relative' }}>
-            <button
+          <div className="relative shrink-0">
+            <Button
+              variant="outline"
+              size="icon"
+              className="relative"
+              aria-label="Alertas"
               onClick={() => setMostrarAlertas(!mostrarAlertas)}
-              className="btn-secundario"
-              style={{
-                borderRadius: 'var(--radius-sm)',
-                padding: '8px 9px',
-                border: '1px solid var(--border)',
-                background: 'var(--card)',
-                position: 'relative',
-                display: 'flex',
-              }}
             >
-              <Bell size={17} strokeWidth={1.9} />
+              <Bell size={16} />
               {alertasSinLeer.length > 0 && (
                 <span
                   style={{
                     position: 'absolute',
-                    top: '-4px',
-                    right: '-4px',
+                    top: '-5px',
+                    right: '-5px',
                     background: 'var(--destructive)',
                     color: '#fff',
                     borderRadius: '999px',
@@ -148,20 +151,11 @@ function Layout({ activa, onCambiarPestaña, children, alertas = [], onMarcarLei
                   {alertasSinLeer.length}
                 </span>
               )}
-            </button>
+            </Button>
 
             {mostrarAlertas && (
               <div
-                className="panel-flotante"
-                style={{
-                  position: 'absolute',
-                  top: '46px',
-                  right: 0,
-                  width: '340px',
-                  maxHeight: '420px',
-                  overflowY: 'auto',
-                  padding: '6px',
-                }}
+                className="panel-flotante absolute right-0 top-11 w-[min(340px,calc(100vw-2rem))] max-h-[420px] overflow-y-auto p-1.5"
               >
                 {alertas.length === 0 && (
                   <p style={{ padding: '16px', color: 'var(--muted-foreground)', fontSize: '13.5px' }}>
@@ -205,9 +199,7 @@ function Layout({ activa, onCambiarPestaña, children, alertas = [], onMarcarLei
           </div>
         </header>
 
-        <main className="animar-entrada px-4 py-5 lg:px-8 lg:py-7">
-          {children}
-        </main>
+        <main className="animar-entrada px-4 py-5 lg:px-8 lg:py-7">{children}</main>
       </div>
     </div>
   )
