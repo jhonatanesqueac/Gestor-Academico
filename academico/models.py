@@ -9,6 +9,10 @@ class Perfil(models.Model):
     usuario = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
     carrera = models.CharField(max_length=100, default='Ingeniería de Sistemas')
     semestre = models.PositiveSmallIntegerField(default=1)
+    institucion = models.CharField(max_length=150, blank=True)
+    telefono = models.CharField(max_length=30, blank=True)
+    bio = models.TextField(max_length=300, blank=True)
+    color_avatar = models.CharField(max_length=7, default='#5B7065')
     institucion = models.CharField(max_length=150, blank=True, default='')
     telefono = models.CharField(max_length=20, blank=True, default='')
     # blank=True/null=True a nivel de modelo para no romper las cuentas

@@ -1,4 +1,5 @@
-import { House, LayoutGrid, Calendar, BarChart3, History, Settings, LogOut, PanelLeftClose } from 'lucide-react'
+import { House, LayoutGrid, Calendar, BarChart3, History, Settings, LogOut, PanelLeftClose, UserRound } from 'lucide-react'
+import { colorTextoSobre } from '../lib/color'
 
 const general = [
   { id: 'inicio', etiqueta: 'Inicio', Icono: House },
@@ -20,17 +21,48 @@ const estiloSeccion = {
   marginBottom: '6px',
 }
 
+function ItemCuenta({ Icono, etiqueta, onClick, activo }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        padding: '8px',
+        borderRadius: 'var(--radius-sm)',
+        border: 'none',
+        background: activo ? 'var(--sidebar-accent)' : 'transparent',
+        color: activo ? 'var(--sidebar-accent-foreground)' : 'var(--sidebar-foreground)',
+        fontSize: '13px',
+        fontWeight: activo ? 600 : 500,
+        width: '100%',
+        textAlign: 'left',
+        transition: 'background-color 0.12s ease, color 0.12s ease',
+      }}
+      onMouseEnter={(e) => { if (!activo) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+      onMouseLeave={(e) => { if (!activo) e.currentTarget.style.background = 'transparent' }}
+    >
+      <Icono size={16} strokeWidth={activo ? 2.25 : 1.9} />
+      {etiqueta}
+    </button>
+  )
+}
+
 function Sidebar({
   activa,
   onCambiarPestaña,
   onLogout,
   onCerrar,
+  perfil,
   asignaturas = [],
   filtroAsignatura,
   onSeleccionarAsignatura,
 }) {
-  const nombre = localStorage.getItem('nombre') || 'Estudiante'
+  const nombre = perfil?.nombre || localStorage.getItem('nombre') || 'Estudiante'
   const inicial = nombre.trim().charAt(0).toUpperCase()
+  const colorAvatar = perfil?.color_avatar
+  const perfilActivo = activa === 'perfil'
 
   return (
     <aside
@@ -46,38 +78,70 @@ function Sidebar({
       }}
     >
       {/* Perfil + botón para ocultar el menú */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '9px', padding: '4px 4px 4px 8px', marginBottom: '18px' }}>
-        <div
-          style={{
-            width: '30px',
-            height: '30px',
-            borderRadius: '999px',
-            background: 'var(--sidebar-primary)',
-            color: 'var(--sidebar-primary-foreground)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '13px',
-            fontWeight: 700,
-            flexShrink: 0,
-          }}
-        >
-          {inicial}
-        </div>
-        <div
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '18px' }}>
+        <button
+          onClick={() => onCambiarPestaña('perfil')}
+          title="Ver mi perfil"
           style={{
             flex: 1,
             minWidth: 0,
-            fontSize: '13px',
-            fontWeight: 600,
-            color: 'var(--sidebar-accent-foreground)',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '9px',
+            padding: '6px 8px',
+            borderRadius: 'var(--radius-sm)',
+            border: 'none',
+            background: perfilActivo ? 'var(--sidebar-accent)' : 'transparent',
+            textAlign: 'left',
+            transition: 'background-color 0.12s ease',
           }}
+          onMouseEnter={(e) => { if (!perfilActivo) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+          onMouseLeave={(e) => { if (!perfilActivo) e.currentTarget.style.background = 'transparent' }}
         >
-          {nombre.split(' ')[0]}
-        </div>
+          <div
+            style={{
+              width: '30px',
+              height: '30px',
+              borderRadius: '999px',
+              background: colorAvatar || 'var(--sidebar-primary)',
+              color: colorAvatar ? colorTextoSobre(colorAvatar) : 'var(--sidebar-primary-foreground)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '13px',
+              fontWeight: 700,
+              flexShrink: 0,
+            }}
+          >
+            {inicial}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: '13px',
+                fontWeight: 600,
+                color: 'var(--sidebar-accent-foreground)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {nombre.split(' ')[0]}
+            </div>
+            <div
+              style={{
+                fontSize: '11px',
+                color: 'var(--sidebar-foreground)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {perfil?.username ? `@${perfil.username}` : 'Ver perfil'}
+            </div>
+          </div>
+        </button>
+
         <button
           onClick={onCerrar}
           title="Ocultar menú"
@@ -180,28 +244,8 @@ function Sidebar({
       {/* Cuenta */}
       <div style={{ marginTop: 'auto' }}>
         <div style={estiloSeccion}>Cuenta</div>
-        <button
-          onClick={onLogout}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            padding: '8px',
-            borderRadius: 'var(--radius-sm)',
-            border: 'none',
-            background: 'transparent',
-            color: 'var(--sidebar-foreground)',
-            fontSize: '13px',
-            fontWeight: 500,
-            width: '100%',
-            textAlign: 'left',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-        >
-          <LogOut size={16} strokeWidth={1.9} />
-          Cerrar sesión
-        </button>
+        <ItemCuenta Icono={UserRound} etiqueta="Mi perfil" activo={perfilActivo} onClick={() => onCambiarPestaña('perfil')} />
+        <ItemCuenta Icono={LogOut} etiqueta="Cerrar sesión" onClick={onLogout} />
       </div>
     </aside>
   )

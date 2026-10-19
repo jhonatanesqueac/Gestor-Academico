@@ -16,7 +16,7 @@ from .models import Perfil, Asignatura, Tarea, Alerta
 from .logica_alertas import ejecutar_revision_completa
 from .serializers import (
     PerfilSerializer, AsignaturaSerializer, TareaSerializer, AlertaSerializer,
-    RegistroSerializer, SolicitarResetSerializer, ConfirmarResetSerializer,
+     MiPerfilSerializer, CambiarPasswordSerializer,RegistroSerializer, SolicitarResetSerializer, ConfirmarResetSerializer,
 )
 
 logger = logging.getLogger('seguridad')
@@ -111,12 +111,35 @@ class AlertaViewSet(viewsets.ModelViewSet):
         return super().list(request, *args, **kwargs)
 
 
-class PerfilViewSet(viewsets.ModelViewSet):
-    serializer_class = PerfilSerializer
+class MiPerfilView(generics.RetrieveUpdateAPIView):
+    """
+    El perfil de quien está logueado. No recibe un id por la URL: siempre es
+    el suyo, así nadie puede ver ni editar el perfil de otra persona.
+    """
+    serializer_class = MiPerfilSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        return Perfil.objects.filter(usuario=self.request.user)
+    def get_object(self):
+        # Quien se creó con createsuperuser (como tu "admin") aún no tiene
+        # Perfil: get_or_create se lo crea la primera vez que entra.
+        perfil, _ = Perfil.objects.get_or_create(usuario=self.request.user)
+        return perfil
+
+
+class CambiarPasswordView(generics.GenericAPIView):
+    serializer_class = CambiarPasswordSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        usuario = request.user
+        usuario.set_password(serializer.validated_data['password_nueva'])
+        usuario.save()
+
+        logger.info('Contraseña cambiada desde el perfil: %s', usuario.username)
+        return Response({'detail': 'Contraseña actualizada correctamente.'})
 
 
 
@@ -133,6 +156,7 @@ class RegistroView(generics.CreateAPIView):
     inicie sesión de nuevo justo después de registrarse.
     """
     serializer_class = RegistroSerializer
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
 
     def create(self, request, *args, **kwargs):
@@ -158,11 +182,13 @@ class RegistroView(generics.CreateAPIView):
 
 @method_decorator(ratelimit(key='ip', rate='5/m', block=True), name='post')
 class LoginView(generics.GenericAPIView):
+    
     """
     Reemplaza al obtain_auth_token por defecto de DRF para poder
     devolver, además del token, el nombre del estudiante —
     así React puede saludarlo sin hacer una segunda petición.
     """
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
 
     def post(self, request, *args, **kwargs):
@@ -237,6 +263,7 @@ class RefreshView(generics.GenericAPIView):
     httpOnly. Con ROTATE_REFRESH_TOKENS=True, cada renovación genera
     un refresh nuevo, así que también actualizamos la cookie.
     """
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
     # Se llama automáticamente en cada carga de página (silent
     # refresh) y solo funciona con una cookie httpOnly válida, que
@@ -280,6 +307,7 @@ class SolicitarResetPasswordView(generics.GenericAPIView):
     Responde el mismo mensaje genérico exista o no el correo, para que
     este endpoint no sirva para adivinar qué correos están registrados.
     """
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
     serializer_class = SolicitarResetSerializer
 
@@ -319,6 +347,7 @@ class ConfirmarResetPasswordView(generics.GenericAPIView):
     cambia la contraseña. El token es de un solo uso (Django invalida
     automáticamente el token viejo apenas la contraseña cambia).
     """
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
     serializer_class = ConfirmarResetSerializer
 

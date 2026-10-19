@@ -10,7 +10,8 @@ function Layout({
   activa,
   onCambiarPestaña,
   children,
-  alertas = [],
+   alertas = [],
+  perfil,
   onMarcarLeida,
   asignaturas = [],
   filtroAsignatura,
@@ -20,7 +21,7 @@ function Layout({
   const [mostrarAlertas, setMostrarAlertas] = useState(false)
   const [esMovil, setEsMovil] = useState(() => window.innerWidth < PUNTO_CORTE)
   const [sidebarAbierto, setSidebarAbierto] = useState(() => window.innerWidth >= PUNTO_CORTE)
-  const nombre = localStorage.getItem('nombre') || 'Estudiante'
+  const nombre = perfil?.nombre || localStorage.getItem('nombre') || 'Estudiante'
 
   // Solo reacciona cuando la ventana CRUZA el punto de corte, así un ajuste
   // pequeño de tamaño no reabre un menú que la persona cerró a propósito.
@@ -92,6 +93,7 @@ function Layout({
           onCerrar={() => setSidebarAbierto(false)}
           asignaturas={asignaturas}
           filtroAsignatura={filtroAsignatura}
+          perfil={perfil}
           onSeleccionarAsignatura={handleSeleccionarAsignatura}
         />
       </div>

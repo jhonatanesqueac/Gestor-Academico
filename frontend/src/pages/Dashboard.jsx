@@ -7,6 +7,7 @@ import GraficoCarga from '../components/GraficoCarga'
 import Gestionar from '../components/Gestionar'
 import Inicio from '../components/Inicio'
 import Historial from '../components/Historial'
+import Perfil from '../components/Perfil'
 
 const INTERVALO_ALERTAS_MS = 60 * 1000
 
@@ -14,6 +15,7 @@ function Dashboard() {
   const [tareas, setTareas] = useState([])
   const [asignaturas, setAsignaturas] = useState([])
   const [alertas, setAlertas] = useState([])
+  const [perfil, setPerfil] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [pestañaActiva, setPestañaActiva] = useState('inicio')
   const [filtroAsignatura, setFiltroAsignatura] = useState(null)
@@ -29,11 +31,18 @@ function Dashboard() {
   }, [])
 
   useEffect(() => {
-    Promise.all([api.get('tareas/'), api.get('asignaturas/'), api.get('alertas/')])
-      .then(([respuestaTareas, respuestaAsignaturas, respuestaAlertas]) => {
+    Promise.all([
+      api.get('tareas/'),
+      api.get('asignaturas/'),
+      api.get('alertas/'),
+      // Si el perfil falla, el resto del dashboard sigue funcionando
+      api.get('perfil/').catch(() => null),
+    ])
+      .then(([respuestaTareas, respuestaAsignaturas, respuestaAlertas, respuestaPerfil]) => {
         setTareas(respuestaTareas.data)
         setAsignaturas(respuestaAsignaturas.data)
         setAlertas(respuestaAlertas.data)
+        setPerfil(respuestaPerfil?.data ?? null)
         setCargando(false)
       })
       .catch((error) => {
@@ -104,6 +113,7 @@ function Dashboard() {
       onCambiarPestaña={setPestañaActiva}
       alertas={alertas}
       onMarcarLeida={handleMarcarLeida}
+      perfil={perfil}
       asignaturas={asignaturas}
       filtroAsignatura={filtroAsignatura}
       onSeleccionarAsignatura={(id) => {
@@ -129,6 +139,9 @@ function Dashboard() {
         <Historial tareas={tareas} onTareaActualizada={handleTareaActualizada} onTareaEliminada={handleTareaEliminada} />
       )}
       {pestañaActiva === 'calendario' && <Calendario tareas={tareas} />}
+      {pestañaActiva === 'perfil' && (
+        <Perfil perfil={perfil} tareas={tareas} asignaturas={asignaturas} onPerfilActualizado={setPerfil} />
+      )}
       {pestañaActiva === 'carga' && <GraficoCarga tareas={tareas} />}
       {pestañaActiva === 'gestionar' && (
         <Gestionar

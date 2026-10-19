@@ -206,3 +206,61 @@ class ConfirmarResetSerializer(serializers.Serializer):
 
 class LoginConNombreView:
     """Marcador — la lógica real vive en views.py, este comentario es solo referencia."""
+
+
+
+class MiPerfilSerializer(serializers.ModelSerializer):
+    """
+    Junta dos tablas en un solo objeto para el frontend: los datos del User
+    de Django (nombre, correo) y los del Perfil (carrera, semestre, etc.).
+    """
+    username = serializers.CharField(source='usuario.username', read_only=True)
+    fecha_registro = serializers.DateTimeField(source='usuario.date_joined', read_only=True)
+    nombre = serializers.CharField(source='usuario.first_name', max_length=150)
+    apellido = serializers.CharField(source='usuario.last_name', max_length=150, required=False, allow_blank=True)
+    email = serializers.EmailField(source='usuario.email', required=False, allow_blank=True)
+    semestre = serializers.IntegerField(min_value=1, max_value=12, required=False)
+    color_avatar = serializers.RegexField(
+        r'^#[0-9a-fA-F]{6}$',
+        required=False,
+        error_messages={'invalid': 'El color debe tener el formato #RRGGBB.'},
+    )
+
+    class Meta:
+        model = Perfil
+        fields = [
+            'username', 'fecha_registro', 'nombre', 'apellido', 'email',
+            'carrera', 'semestre', 'institucion', 'telefono', 'bio', 'color_avatar',
+        ]
+
+    def update(self, instance, validated_data):
+        # Los campos con "source='usuario.xxx'" pertenecen al User, no al Perfil:
+        # los separamos y los guardamos en su propia tabla.
+        datos_usuario = validated_data.pop('usuario', {})
+        usuario = instance.usuario
+        for campo, valor in datos_usuario.items():
+            setattr(usuario, campo, valor)
+        usuario.save()
+        return super().update(instance, validated_data)
+
+
+class CambiarPasswordSerializer(serializers.Serializer):
+    password_actual = serializers.CharField(write_only=True)
+    password_nueva = serializers.CharField(write_only=True)
+
+    def validate_password_actual(self, valor):
+        if not self.context['request'].user.check_password(valor):
+            raise serializers.ValidationError('La contraseña actual no es correcta.')
+        return valor
+
+    def validate_password_nueva(self, valor):
+        # Mismas reglas de seguridad que el registro (largo, muy común, solo números...)
+        validate_password(valor, self.context['request'].user)
+        return valor
+
+    def validate(self, datos):
+        if datos['password_actual'] == datos['password_nueva']:
+            raise serializers.ValidationError(
+                {'password_nueva': 'La nueva contraseña debe ser distinta a la actual.'}
+            )
+        return datos
