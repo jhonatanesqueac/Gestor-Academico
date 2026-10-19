@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Bell, Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Sidebar from './Slidebar'
+import { useAuth } from '../context/useAuth'
 
 const PUNTO_CORTE = 1024
 
@@ -18,6 +19,7 @@ function Layout({
   onSeleccionarAsignatura,
 }) {
   const navigate = useNavigate()
+  const { cerrarSesion } = useAuth()
   const [mostrarAlertas, setMostrarAlertas] = useState(false)
   const [esMovil, setEsMovil] = useState(() => window.innerWidth < PUNTO_CORTE)
   const [sidebarAbierto, setSidebarAbierto] = useState(() => window.innerWidth >= PUNTO_CORTE)
@@ -39,8 +41,9 @@ function Layout({
     return () => window.removeEventListener('resize', alRedimensionar)
   }, [])
 
-  const handleLogout = () => {
-    localStorage.removeItem('token')
+  const handleLogout = async () => {
+    // Avisa al backend (borra la cookie del refresh) y limpia el estado.
+    await cerrarSesion()
     localStorage.removeItem('nombre')
     navigate('/login')
   }

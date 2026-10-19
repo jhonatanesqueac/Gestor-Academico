@@ -223,9 +223,13 @@ class LogoutView(generics.GenericAPIView):
     Invalida el refresh token del lado del servidor (lo mete a la
     blacklist), para que aunque alguien lo haya robado antes del
     logout, no lo pueda seguir usando para sacar nuevos access tokens.
-    También borra la cookie httpOnly donde vivía.
+    también borra la cookie httpOnly donde vivía.
+
+    Es pública a propósito: debe funcionar aunque el access token ya
+    haya vencido. La cookie del refresh es la que identifica la sesión.
     """
-    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get(settings.REFRESH_COOKIE_NAME)
@@ -244,14 +248,14 @@ class LogoutView(generics.GenericAPIView):
             token.blacklist()
         except TokenError:
             logger.warning(
-                'Intento de logout con token inválido/expirado: %s (IP: %s)',
-                request.user.username, obtener_ip_cliente(request),
+                'Intento de logout con token inválido/expirado (IP: %s)',
+                obtener_ip_cliente(request),
             )
             return response
 
         logger.info(
-            'Logout: %s (IP: %s)',
-            request.user.username, obtener_ip_cliente(request),
+            'Logout: usuario id %s (IP: %s)',
+            token['user_id'], obtener_ip_cliente(request),
         )
         return response
 
