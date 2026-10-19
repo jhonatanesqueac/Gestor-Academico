@@ -36,9 +36,17 @@ export function AuthProvider({ children }) {
 
   const iniciarSesion = () => setAutenticado(true)
 
-  const cerrarSesion = () => {
-    clearAccessToken()
-    setAutenticado(false)
+  const cerrarSesion = async () => {
+    try {
+      // Le pedimos al backend que borre la cookie del refresh.
+      // Sin esto, al recargar la sesión revive sola.
+      await api.post('auth/logout/', {})
+    } catch {
+      // Si falla (red caída, token vencido), igual cerramos en el navegador.
+    } finally {
+      clearAccessToken()
+      setAutenticado(false)
+    }
   }
 
   return (
