@@ -1,4 +1,4 @@
-import { Calendar, Pencil, Trash2, ArrowLeft, ArrowRight, MoreHorizontal } from 'lucide-react'
+import { Calendar, Pencil, Trash2, ArrowLeft, ArrowRight, MoreHorizontal, ListChecks } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,7 +18,7 @@ const anteriorEstado = {
   TERMINADO: { valor: 'EN_PROCESO' },
 }
 
-function TarjetaTarea({ tarea, onCambiarEstado, onEditar, onEliminar }) {
+function TarjetaTarea({ tarea, onCambiarEstado, onEditar, onEliminar, onVerPasos, pasos = [] }) {
   const avanzar = siguienteEstado[tarea.estado]
   const retroceder = anteriorEstado[tarea.estado]
 
@@ -41,6 +41,27 @@ function TarjetaTarea({ tarea, onCambiarEstado, onEditar, onEliminar }) {
             </div>
           </div>
         </div>
+
+                {pasos.length > 0 && (
+          <button
+            onClick={() => onVerPasos(tarea)}
+            className="w-full mt-3 text-left"
+            aria-label="Ver pasos de la tarea"
+          >
+            <div className="flex justify-between text-[11px] text-muted-foreground mb-1">
+              <span>Pasos</span>
+              <span className="num-tabular">
+                {pasos.filter((p) => p.completado).length}/{pasos.length}
+              </span>
+            </div>
+            <div className="h-1 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-300"
+                style={{ width: `${(pasos.filter((p) => p.completado).length / pasos.length) * 100}%` }}
+              />
+            </div>
+          </button>
+        )}
 
         <div className="flex items-center justify-between border-t pt-2 mt-3">
           <div className="flex items-center gap-1">
@@ -75,7 +96,7 @@ function TarjetaTarea({ tarea, onCambiarEstado, onEditar, onEliminar }) {
               }
             />
             <DropdownMenuContent align="end" className="w-36">
-              <DropdownMenuItem onClick={() => onEditar(tarea)}>
+              <DropdownMenuItem onClick={() => onVerPasos(tarea)}><ListChecks size={13} /> Pasos</DropdownMenuItem><DropdownMenuItem onClick={() => onEditar(tarea)}>
                 <Pencil size={13} /> Editar
               </DropdownMenuItem>
               <DropdownMenuItem variant="destructive" onClick={() => onEliminar(tarea.id)}>

@@ -16,6 +16,7 @@ function Dashboard() {
   const [asignaturas, setAsignaturas] = useState([])
   const [alertas, setAlertas] = useState([])
   const [perfil, setPerfil] = useState(null)
+  const [pasos, setPasos] = useState([])
   const [cargando, setCargando] = useState(true)
   const [pestañaActiva, setPestañaActiva] = useState('inicio')
   const [filtroAsignatura, setFiltroAsignatura] = useState(null)
@@ -37,12 +38,14 @@ function Dashboard() {
       api.get('alertas/'),
       // Si el perfil falla, el resto del dashboard sigue funcionando
       api.get('perfil/').catch(() => null),
+      api.get('pasos/').catch(() => ({ data: [] })),
     ])
-      .then(([respuestaTareas, respuestaAsignaturas, respuestaAlertas, respuestaPerfil]) => {
+      .then(([respuestaTareas, respuestaAsignaturas, respuestaAlertas, respuestaPerfil, respuestaPasos]) => {
         setTareas(respuestaTareas.data)
         setAsignaturas(respuestaAsignaturas.data)
         setAlertas(respuestaAlertas.data)
         setPerfil(respuestaPerfil?.data ?? null)
+        setPasos(respuestaPasos.data)
         setCargando(false)
       })
       .catch((error) => {
@@ -105,6 +108,13 @@ function Dashboard() {
     }
   }
 
+  const handlePasoCreado = (nuevo) => setPasos((actuales) => [...actuales, nuevo])
+
+  const handlePasoActualizado = (actualizado) =>
+    setPasos((actuales) => actuales.map((p) => (p.id === actualizado.id ? actualizado : p)))
+
+      const handlePasoEliminado = (id) => setPasos((actuales) => actuales.filter((p) => p.id !== id))
+
   if (cargando) return <p style={{ padding: '24px' }}>Cargando datos...</p>
 
   return (
@@ -132,7 +142,7 @@ function Dashboard() {
           onTareaEliminada={handleTareaEliminada}
           filtroAsignatura={filtroAsignatura}
           onQuitarFiltro={() => setFiltroAsignatura(null)}
-          onIrHistorial={() => setPestañaActiva('historial')}
+          onIrHistorial={() => setPestañaActiva('historial')} pasos={pasos} onPasoCreado={handlePasoCreado} onPasoActualizado={handlePasoActualizado} onPasoEliminado={handlePasoEliminado}
         />
       )}
       {pestañaActiva === 'historial' && (

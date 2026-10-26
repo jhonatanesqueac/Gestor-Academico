@@ -3,6 +3,7 @@ import { AlertTriangle, X } from 'lucide-react'
 import api from '../api/axios'
 import TarjetaTarea from './TarjetaTarea'
 import ModalEditarTarea from './ModalEditarTarea'
+import DialogPasos from './DialogPasos'
 import { esVencida, haPasadoSuDia } from '../lib/tareas'
 
 const columnas = [
@@ -11,12 +12,13 @@ const columnas = [
   { estado: 'TERMINADO', titulo: 'Terminado' },
 ]
 
-function Kanban({ tareas, asignaturas, onTareaActualizada, onTareaEliminada, filtroAsignatura, onQuitarFiltro, onIrHistorial }) {
+function Kanban({ tareas, asignaturas, onTareaActualizada, onTareaEliminada, filtroAsignatura, onQuitarFiltro, onIrHistorial, pasos = [], onPasoCreado, onPasoActualizado, onPasoEliminado }) {
   const [errorMsg, setErrorMsg] = useState('')
   const [tareaEditando, setTareaEditando] = useState(null)
   const [columnaMovil, setColumnaMovil] = useState('PENDIENTE')
   const [esMovil, setEsMovil] = useState(() => window.innerWidth < 1024)
   const [avisoCerrado, setAvisoCerrado] = useState(false)
+  const [tareaConPasos, setTareaConPasos] = useState(null)
 
   useEffect(() => {
     const alRedimensionar = () => setEsMovil(window.innerWidth < 1024)
@@ -154,7 +156,7 @@ function Kanban({ tareas, asignaturas, onTareaActualizada, onTareaEliminada, fil
                     tarea={tarea}
                     onCambiarEstado={handleCambiarEstado}
                     onEditar={setTareaEditando}
-                    onEliminar={handleEliminar}
+                    onEliminar={handleEliminar} onVerPasos={setTareaConPasos} pasos={pasos.filter((p) => p.tarea === tarea.id)}
                   />
                 ))}
               </div>
@@ -163,6 +165,16 @@ function Kanban({ tareas, asignaturas, onTareaActualizada, onTareaEliminada, fil
         })}
       </div>
 
+      {tareaConPasos && (
+        <DialogPasos
+          tarea={tareaConPasos}
+          pasos={pasos.filter((p) => p.tarea === tareaConPasos.id)}
+          onCerrar={() => setTareaConPasos(null)}
+          onPasoCreado={onPasoCreado}
+          onPasoActualizado={onPasoActualizado}
+          onPasoEliminado={onPasoEliminado}
+        />
+      )}
       {tareaEditando && (
         <ModalEditarTarea
           tarea={tareaEditando}

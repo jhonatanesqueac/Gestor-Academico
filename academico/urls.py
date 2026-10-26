@@ -1,5 +1,6 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
+from .api_pasos import PasoViewSet
 from .views import (
     AsignaturaViewSet, TareaViewSet, AlertaViewSet,
     RegistroView, LoginView, LogoutView, RefreshView,
@@ -11,6 +12,7 @@ router = DefaultRouter()
 router.register(r'asignaturas', AsignaturaViewSet, basename='asignatura')
 router.register(r'tareas', TareaViewSet, basename='tarea')
 router.register(r'alertas', AlertaViewSet, basename='alerta')
+router.register(r'pasos', PasoViewSet, basename='paso')
 
 urlpatterns = [
     path('auth/login/', LoginView.as_view(), name='api-login'),
