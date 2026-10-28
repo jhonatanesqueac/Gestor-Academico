@@ -8,6 +8,7 @@ import Gestionar from '../components/Gestionar'
 import Inicio from '../components/Inicio'
 import Historial from '../components/Historial'
 import Perfil from '../components/Perfil'
+import Asistente from '../components/Asistente'
 
 const INTERVALO_ALERTAS_MS = 60 * 1000
 
@@ -114,6 +115,12 @@ function Dashboard() {
     setPasos((actuales) => actuales.map((p) => (p.id === actualizado.id ? actualizado : p)))
 
       const handlePasoEliminado = (id) => setPasos((actuales) => actuales.filter((p) => p.id !== id))
+  
+      const handleAsistenteCreo = (resultado) => {
+    if (resultado.asignatura_creada) handleAsignaturaCreada(resultado.asignatura)
+    handleTareaCreada(resultado.tarea)
+    setPasos((actuales) => [...actuales, ...resultado.pasos])
+  }
 
   if (cargando) return <p style={{ padding: '24px' }}>Cargando datos...</p>
 
@@ -153,6 +160,13 @@ function Dashboard() {
         <Perfil perfil={perfil} tareas={tareas} asignaturas={asignaturas} onPerfilActualizado={setPerfil} />
       )}
       {pestañaActiva === 'carga' && <GraficoCarga tareas={tareas} />}
+      {pestañaActiva === 'asistente' && (
+        <Asistente
+          asignaturas={asignaturas}
+          onCreada={handleAsistenteCreo}
+          onIrTablero={() => setPestañaActiva('kanban')}
+        />
+      )}
       {pestañaActiva === 'gestionar' && (
         <Gestionar
           asignaturas={asignaturas}

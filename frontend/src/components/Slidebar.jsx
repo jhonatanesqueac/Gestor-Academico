@@ -1,9 +1,10 @@
-import { House, LayoutGrid, Calendar, BarChart3, History, Settings, LogOut, PanelLeftClose, UserRound } from 'lucide-react'
+import { House, LayoutGrid, Calendar, BarChart3, History, Settings, LogOut, PanelLeftClose, UserRound, Sparkles } from 'lucide-react'
 import { colorTextoSobre } from '../lib/color'
 
 const general = [
   { id: 'inicio', etiqueta: 'Inicio', Icono: House },
   { id: 'kanban', etiqueta: 'Tablero', Icono: LayoutGrid },
+  { id: 'asistente', etiqueta: 'Asistente IA', Icono: Sparkles },
   { id: 'calendario', etiqueta: 'Calendario', Icono: Calendar },
   { id: 'carga', etiqueta: 'Carga semanal', Icono: BarChart3 },
   { id: 'historial', etiqueta: 'Historial', Icono: History },
