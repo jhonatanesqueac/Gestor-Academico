@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { AlertTriangle, X } from 'lucide-react'
+import { motion } from 'framer-motion'
 import api from '../api/axios'
 import TarjetaTarea from './TarjetaTarea'
 import ModalEditarTarea from './ModalEditarTarea'
@@ -135,9 +136,21 @@ function Kanban({ tareas, asignaturas, onTareaActualizada, onTareaEliminada, fil
           if (esMovil && columna.estado !== columnaMovil) return null
 
           return (
-            <div key={columna.estado} className="flex-1 min-w-0 w-full">
+            <motion.div
+              key={columna.estado}
+              className="flex-1 min-w-0 w-full"
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: columnas.indexOf(columna) * 0.08 }}
+              style={{
+                background: 'rgba(233, 236, 230, 0.55)',
+                border: '1px solid var(--border)',
+                borderRadius: 22,
+                padding: 14,
+              }}
+            >
               <div className="flex justify-between items-center px-1 pb-3 border-b mb-3">
-                <h3 className="text-[13px] text-muted-foreground font-medium">{columna.titulo}</h3>
+                <h3 className="text-[13px] font-semibold" style={{ letterSpacing: '-0.02em' }}>{columna.titulo}</h3>
                 <span className="num-tabular text-xs font-semibold text-muted-foreground/70 bg-muted rounded-full px-2 py-0.5">
                   {tareasDeColumna.length}
                 </span>
@@ -149,10 +162,10 @@ function Kanban({ tareas, asignaturas, onTareaActualizada, onTareaEliminada, fil
                 </div>
               )}
 
-              <div className="max-h-[calc(100vh-280px)] overflow-y-auto pr-1 -mr-1">
-                {tareasDeColumna.map((tarea) => (
+              <div className="max-h-[calc(100vh-300px)] overflow-y-auto p-1 -m-1">
+                {tareasDeColumna.map((tarea, indice) => (
                   <TarjetaTarea
-                    key={tarea.id}
+                    key={tarea.id} indice={indice}
                     tarea={tarea}
                     onCambiarEstado={handleCambiarEstado}
                     onEditar={setTareaEditando}
@@ -160,7 +173,7 @@ function Kanban({ tareas, asignaturas, onTareaActualizada, onTareaEliminada, fil
                   />
                 ))}
               </div>
-            </div>
+            </motion.div>
           )
         })}
       </div>

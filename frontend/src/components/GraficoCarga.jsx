@@ -1,5 +1,8 @@
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Card, CardContent } from '@/components/ui/card'
+import { motion } from 'framer-motion'
+
+const MotionCard = motion.create(Card)
 
 function obtenerRangoSemanaActual() {
   const hoy = new Date()
@@ -56,13 +59,18 @@ function GraficoCarga({ tareas }) {
   return (
     <div>
       <div className="mb-5">
-        <h2>Carga semanal</h2>
+        <h2 style={{ fontSize: 28, letterSpacing: '-0.045em' }}>Carga semanal</h2>
         <p className="text-[13px] text-muted-foreground mt-1">
           Horas estimadas por asignatura, para las entregas de esta semana.
         </p>
       </div>
 
-      <Card className="shadow-none">
+      <MotionCard
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="shadow-none rounded-3xl"
+      >
         <CardContent className="p-5">
           {datos.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">
@@ -71,7 +79,7 @@ function GraficoCarga({ tareas }) {
           ) : (
             <>
               <div className="flex items-baseline gap-1.5 mb-4">
-                <span className="text-[22px] font-semibold num-tabular">{totalHoras.toFixed(1)}</span>
+                <span className="text-[38px] font-semibold num-tabular" style={{ letterSpacing: '-0.05em' }}>{Number(totalHoras.toFixed(1))}</span>
                 <span className="text-[13px] text-muted-foreground">
                   horas repartidas en {datos.length} {datos.length === 1 ? 'asignatura' : 'asignaturas'}
                 </span>
@@ -93,7 +101,7 @@ function GraficoCarga({ tareas }) {
                     label={{ value: 'Horas', angle: -90, position: 'insideLeft', fill: 'var(--muted-foreground)', fontSize: 12 }}
                   />
                   <Tooltip cursor={{ fill: 'var(--muted)' }} content={<TooltipPersonalizado />} />
-                  <Bar dataKey="horas" radius={[6, 6, 0, 0]} maxBarSize={56}>
+                  <Bar dataKey="horas" radius={[10, 10, 0, 0]} maxBarSize={56} animationDuration={900} animationEasing="ease-out">
                     {datos.map((item, i) => (
                       <Cell key={i} fill={item.color} />
                     ))}
@@ -103,7 +111,7 @@ function GraficoCarga({ tareas }) {
             </>
           )}
         </CardContent>
-      </Card>
+      </MotionCard>
     </div>
   )
 }

@@ -1,5 +1,23 @@
-import { House, LayoutGrid, Calendar, BarChart3, History, Settings, LogOut, PanelLeftClose, UserRound, Sparkles } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import {
+  House,
+  LayoutGrid,
+  Calendar,
+  BarChart3,
+  History,
+  Settings,
+  LogOut,
+  PanelLeftClose,
+  UserRound,
+  Sparkles,
+  Workflow,
+  ShieldCheck,
+  Cookie,
+} from 'lucide-react'
 import { colorTextoSobre } from '../lib/color'
+import { useConsent } from '../context/consentStore'
+import { stagger, rise } from '../lib/motion'
 
 const general = [
   { id: 'inicio', etiqueta: 'Inicio', Icono: House },
@@ -22,30 +40,30 @@ const estiloSeccion = {
   marginBottom: '6px',
 }
 
-function ItemCuenta({ Icono, etiqueta, onClick, activo }) {
+const resorte = { type: 'spring', stiffness: 500, damping: 38 }
+
+// Botón de menú: el fondo del ítem activo "viaja" de uno a otro (layoutId)
+function ItemNav({ activo, onClick, pillId, tamaño = 13, children }) {
   return (
     <button
       onClick={onClick}
+      className={`relative flex w-full items-center rounded-sm px-2 py-2 text-left transition-colors ${
+        activo ? 'font-semibold' : 'font-medium hover:bg-white/[0.05]'
+      }`}
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        padding: '8px',
-        borderRadius: 'var(--radius-sm)',
+        fontSize: tamaño,
         border: 'none',
-        background: activo ? 'var(--sidebar-accent)' : 'transparent',
         color: activo ? 'var(--sidebar-accent-foreground)' : 'var(--sidebar-foreground)',
-        fontSize: '13px',
-        fontWeight: activo ? 600 : 500,
-        width: '100%',
-        textAlign: 'left',
-        transition: 'background-color 0.12s ease, color 0.12s ease',
       }}
-      onMouseEnter={(e) => { if (!activo) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
-      onMouseLeave={(e) => { if (!activo) e.currentTarget.style.background = 'transparent' }}
     >
-      <Icono size={16} strokeWidth={activo ? 2.25 : 1.9} />
-      {etiqueta}
+      {activo && (
+        <motion.span
+          layoutId={pillId}
+          transition={resorte}
+          className="absolute inset-0 rounded-sm bg-sidebar-accent"
+        />
+      )}
+      <span className="relative z-10 flex w-full min-w-0 items-center gap-2.5">{children}</span>
     </button>
   )
 }
@@ -60,6 +78,7 @@ function Sidebar({
   filtroAsignatura,
   onSeleccionarAsignatura,
 }) {
+  const { openPrefs } = useConsent()
   const nombre = perfil?.nombre || localStorage.getItem('nombre') || 'Estudiante'
   const inicial = nombre.trim().charAt(0).toUpperCase()
   const colorAvatar = perfil?.color_avatar
@@ -70,7 +89,8 @@ function Sidebar({
       style={{
         width: 'var(--sidebar-w)',
         height: '100%',
-        background: 'var(--sidebar)',
+        background:
+          'radial-gradient(ellipse at 80% 0%, rgba(137, 161, 142, 0.14), transparent 45%), var(--sidebar)',
         borderRight: '1px solid var(--sidebar-border)',
         display: 'flex',
         flexDirection: 'column',
@@ -78,26 +98,23 @@ function Sidebar({
         overflowY: 'auto',
       }}
     >
+      {/* Marca, igual que en el login */}
+      <div className="login-brand" style={{ padding: '2px 4px', marginBottom: '16px' }}>
+        <span className="login-brand-icon" style={{ width: 32, height: 32, borderRadius: 10 }}>
+          <Workflow size={18} strokeWidth={2.2} />
+        </span>
+        <span style={{ fontSize: '16px' }}>StudyFlow</span>
+      </div>
+
       {/* Perfil + botón para ocultar el menú */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '18px' }}>
         <button
           onClick={() => onCambiarPestaña('perfil')}
           title="Ver mi perfil"
-          style={{
-            flex: 1,
-            minWidth: 0,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '9px',
-            padding: '6px 8px',
-            borderRadius: 'var(--radius-sm)',
-            border: 'none',
-            background: perfilActivo ? 'var(--sidebar-accent)' : 'transparent',
-            textAlign: 'left',
-            transition: 'background-color 0.12s ease',
-          }}
-          onMouseEnter={(e) => { if (!perfilActivo) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
-          onMouseLeave={(e) => { if (!perfilActivo) e.currentTarget.style.background = 'transparent' }}
+          className={`flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2 py-1.5 text-left transition-colors ${
+            perfilActivo ? 'bg-sidebar-accent' : 'hover:bg-white/[0.05]'
+          }`}
+          style={{ border: 'none' }}
         >
           <div
             style={{
@@ -147,27 +164,8 @@ function Sidebar({
           onClick={onCerrar}
           title="Ocultar menú"
           aria-label="Ocultar menú"
-          style={{
-            width: '28px',
-            height: '28px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: 'var(--radius-sm)',
-            border: 'none',
-            background: 'transparent',
-            color: 'var(--sidebar-foreground)',
-            flexShrink: 0,
-            transition: 'background-color 0.12s ease, color 0.12s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.07)'
-            e.currentTarget.style.color = 'var(--sidebar-accent-foreground)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent'
-            e.currentTarget.style.color = 'var(--sidebar-foreground)'
-          }}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm transition-colors hover:bg-white/[0.07]"
+          style={{ border: 'none', color: 'var(--sidebar-foreground)' }}
         >
           <PanelLeftClose size={16} strokeWidth={1.9} />
         </button>
@@ -175,36 +173,24 @@ function Sidebar({
 
       {/* General */}
       <div style={estiloSeccion}>General</div>
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '18px' }}>
+      <motion.nav
+        variants={stagger}
+        initial="hidden"
+        animate="show"
+        style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '18px' }}
+      >
         {general.map(({ id, etiqueta, Icono }) => {
           const esActiva = activa === id
           return (
-            <button
-              key={id}
-              onClick={() => onCambiarPestaña(id)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '8px',
-                borderRadius: 'var(--radius-sm)',
-                border: 'none',
-                background: esActiva ? 'var(--sidebar-accent)' : 'transparent',
-                color: esActiva ? 'var(--sidebar-accent-foreground)' : 'var(--sidebar-foreground)',
-                fontWeight: esActiva ? 600 : 500,
-                fontSize: '13px',
-                textAlign: 'left',
-                transition: 'background-color 0.12s ease, color 0.12s ease',
-              }}
-              onMouseEnter={(e) => { if (!esActiva) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
-              onMouseLeave={(e) => { if (!esActiva) e.currentTarget.style.background = 'transparent' }}
-            >
-              <Icono size={16} strokeWidth={esActiva ? 2.25 : 1.9} />
-              {etiqueta}
-            </button>
+            <motion.div key={id} variants={rise}>
+              <ItemNav activo={esActiva} pillId="pill-nav" onClick={() => onCambiarPestaña(id)}>
+                <Icono size={16} strokeWidth={esActiva ? 2.25 : 1.9} />
+                {etiqueta}
+              </ItemNav>
+            </motion.div>
           )
         })}
-      </nav>
+      </motion.nav>
 
       {/* Mis cursos */}
       {asignaturas.length > 0 && (
@@ -214,28 +200,20 @@ function Sidebar({
             {asignaturas.map((a) => {
               const esActiva = filtroAsignatura === a.id
               return (
-                <button
+                <ItemNav
                   key={a.id}
+                  activo={esActiva}
+                  pillId="pill-cursos"
+                  tamaño={12.5}
                   onClick={() => onSeleccionarAsignatura(a.id)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '7px 8px',
-                    borderRadius: 'var(--radius-sm)',
-                    border: 'none',
-                    background: esActiva ? 'var(--sidebar-accent)' : 'transparent',
-                    color: esActiva ? 'var(--sidebar-accent-foreground)' : 'var(--sidebar-foreground)',
-                    fontSize: '12.5px',
-                    fontWeight: esActiva ? 600 : 500,
-                    textAlign: 'left',
-                  }}
-                  onMouseEnter={(e) => { if (!esActiva) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
-                  onMouseLeave={(e) => { if (!esActiva) e.currentTarget.style.background = 'transparent' }}
                 >
-                  <span style={{ width: '8px', height: '8px', borderRadius: '999px', background: a.color, flexShrink: 0 }} />
-                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.nombre}</span>
-                </button>
+                  <span
+                    style={{ width: '8px', height: '8px', borderRadius: '999px', background: a.color, flexShrink: 0 }}
+                  />
+                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {a.nombre}
+                  </span>
+                </ItemNav>
               )
             })}
           </div>
@@ -245,8 +223,42 @@ function Sidebar({
       {/* Cuenta */}
       <div style={{ marginTop: 'auto' }}>
         <div style={estiloSeccion}>Cuenta</div>
-        <ItemCuenta Icono={UserRound} etiqueta="Mi perfil" activo={perfilActivo} onClick={() => onCambiarPestaña('perfil')} />
-        <ItemCuenta Icono={LogOut} etiqueta="Cerrar sesión" onClick={onLogout} />
+        <ItemNav activo={perfilActivo} pillId="pill-nav" onClick={() => onCambiarPestaña('perfil')}>
+          <UserRound size={16} strokeWidth={perfilActivo ? 2.25 : 1.9} />
+          Mi perfil
+        </ItemNav>
+        <ItemNav activo={false} pillId="pill-cuenta" onClick={onLogout}>
+          <LogOut size={16} strokeWidth={1.9} />
+          Cerrar sesión
+        </ItemNav>
+
+        {/* Privacidad */}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '4px 14px',
+            padding: '14px 8px 2px',
+            marginTop: '10px',
+            borderTop: '1px solid var(--sidebar-border)',
+          }}
+        >
+          <Link
+            to="/politica-de-datos"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-[11px] text-sidebar-foreground opacity-70 transition-opacity hover:opacity-100"
+          >
+            <ShieldCheck size={12} /> Política de datos
+          </Link>
+          <button
+            onClick={openPrefs}
+            className="inline-flex items-center gap-1.5 text-[11px] opacity-70 transition-opacity hover:opacity-100"
+            style={{ border: 'none', padding: 0, color: 'var(--sidebar-foreground)' }}
+          >
+            <Cookie size={12} /> Cookies
+          </button>
+        </div>
       </div>
     </aside>
   )

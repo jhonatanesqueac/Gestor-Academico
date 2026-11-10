@@ -8,6 +8,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import AnilloCriticidad from './AnilloCriticidad'
+import { motion } from 'framer-motion'
+
+const MotionCard = motion.create(Card)
 
 const siguienteEstado = {
   PENDIENTE: { valor: 'EN_PROCESO', etiqueta: 'En proceso' },
@@ -18,12 +21,22 @@ const anteriorEstado = {
   TERMINADO: { valor: 'EN_PROCESO' },
 }
 
-function TarjetaTarea({ tarea, onCambiarEstado, onEditar, onEliminar, onVerPasos, pasos = [] }) {
+function TarjetaTarea({ tarea, onCambiarEstado, onEditar, onEliminar, onVerPasos, pasos = [], indice = 0 }) {
   const avanzar = siguienteEstado[tarea.estado]
   const retroceder = anteriorEstado[tarea.estado]
 
   return (
-    <Card className="mb-2.5 gap-0 py-0 shadow-none transition-shadow hover:shadow-md">
+    <MotionCard
+      layout="position"
+      initial={{ opacity: 0, y: 14 }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: Math.min(indice, 8) * 0.05 },
+      }}
+      transition={{ layout: { type: 'spring', stiffness: 400, damping: 40 } }}
+      className="mb-2.5 gap-0 rounded-2xl py-0 shadow-none transition duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+    >
       <CardContent className="p-3.5">
         <div className="flex items-start gap-3">
           <AnilloCriticidad nivel={tarea.nivel_criticidad} />
@@ -106,7 +119,7 @@ function TarjetaTarea({ tarea, onCambiarEstado, onEditar, onEliminar, onVerPasos
           </DropdownMenu>
         </div>
       </CardContent>
-    </Card>
+    </MotionCard>
   )
 }
 

@@ -3,6 +3,9 @@ import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import listPlugin from '@fullcalendar/list'
 import { Card, CardContent } from '@/components/ui/card'
+import { motion } from 'framer-motion'
+
+const MotionCard = motion.create(Card)
 
 function colorPorCriticidad(nivel) {
   if (nivel >= 70) return 'var(--destructive)'
@@ -30,13 +33,18 @@ function Calendario({ tareas }) {
   return (
     <div>
       <div className="mb-5">
-        <h2>Calendario</h2>
+        <h2 style={{ fontSize: 28, letterSpacing: '-0.045em' }}>Calendario</h2>
         <p className="text-[13px] text-muted-foreground mt-1">
           Cada entrega coloreada según su nivel de criticidad.
         </p>
       </div>
 
-      <Card className="shadow-none gap-0 py-0">
+      <MotionCard
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="shadow-none gap-0 py-0 rounded-3xl"
+      >
         <CardContent className={esMovil ? 'p-2' : 'p-5'} style={{ overflowX: 'auto' }}>
           <div style={{ minWidth: esMovil ? 'auto' : '640px' }} className="calendario-studyflow">
             <FullCalendar
@@ -55,7 +63,7 @@ function Calendario({ tareas }) {
             />
           </div>
         </CardContent>
-      </Card>
+      </MotionCard>
     </div>
   )
 }

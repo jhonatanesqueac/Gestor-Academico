@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogIn, Workflow } from 'lucide-react'
+import { ArrowRight, BookOpen, Check, LockKeyhole, UserRound, Workflow } from 'lucide-react'
 import api, { setAccessToken } from '../api/axios'
 import { useAuth } from '../context/useAuth'
 
@@ -32,91 +32,112 @@ function Login() {
   }
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--background)',
-        padding: '20px',
-      }}
-    >
-      <div className="animar-entrada panel" style={{ width: '380px', maxWidth: '100%', padding: '36px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '26px' }}>
-          <div
-            style={{
-              width: '46px',
-              height: '46px',
-              borderRadius: 'var(--r-md)',
-              background: 'var(--accent)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '14px',
-            }}
-          >
-            <Workflow size={24} color="#c0acac" strokeWidth={2.1} />
-          </div>
-          <h1 style={{ fontSize: '25px', marginBottom: '2px' }}>StudyFlow</h1>
-          <p style={{ fontSize: '13px', color: 'var(--muted-foreground)' }}>
-            Organiza tu semestre sin perder el control
-          </p>
-        </div>
+    <main className="login-page">
+      <div className="login-glow login-glow-one" aria-hidden="true" />
+      <div className="login-glow login-glow-two" aria-hidden="true" />
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '14px' }}>
-            <label className="etiqueta-campo">Usuario</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="input-campo"
-              required
-              autoFocus
-            />
-          </div>
-
-          <div style={{ marginBottom: '8px' }}>
-            <label className="etiqueta-campo">Contraseña</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input-campo"
-              required
-            />
-          </div>
-
-          <p style={{ marginBottom: '20px', textAlign: 'right' }}>
-            <Link to="/olvide-password" style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
-              ¿Olvidaste tu contraseña?
+      <section className="login-shell animar-entrada" aria-label="Iniciar sesión en StudyFlow">
+        <aside className="login-showcase">
+          <div className="login-showcase-content">
+            <Link to="/" className="login-brand" aria-label="StudyFlow, inicio">
+              <span className="login-brand-icon"><Workflow size={21} strokeWidth={2.2} /></span>
+              <span>StudyFlow</span>
             </Link>
+
+            <div className="login-message">
+              <span className="login-eyebrow"><span /> TU ESPACIO PARA CRECER</span>
+              <h1>Tu semestre,<br />bajo control.</h1>
+              <p>Organiza tus tareas, cuida tu tiempo y avanza con claridad hacia tus metas.</p>
+            </div>
+
+            <div className="login-preview" aria-hidden="true">
+              <div className="login-preview-top">
+                <span className="login-preview-label"><BookOpen size={15} /> Mi semana</span>
+                <span className="login-preview-count">2 de 3</span>
+              </div>
+              <div className="login-progress"><span /></div>
+              <div className="login-preview-task">
+                <span className="login-check"><Check size={12} strokeWidth={2.5} /></span>
+                <span>Repasar apuntes de cálculo</span>
+                <span className="login-task-time">9:00</span>
+              </div>
+              <div className="login-preview-task">
+                <span className="login-check"><Check size={12} strokeWidth={2.5} /></span>
+                <span>Entregar proyecto de diseño</span>
+                <span className="login-task-time">14:30</span>
+              </div>
+            </div>
+          </div>
+          <p className="login-showcase-footnote">Pequeños pasos. Grandes logros.</p>
+          <div className="login-orbit login-orbit-one" />
+          <div className="login-orbit login-orbit-two" />
+        </aside>
+
+        <div className="login-form-panel">
+          <div className="login-form-heading">
+            <span className="login-welcome">QUÉ BUENO TENERTE DE VUELTA</span>
+            <h2>Inicia sesión</h2>
+            <p>Ingresa tus datos para continuar con tu organización.</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="login-form">
+            <div className="login-field">
+              <label htmlFor="login-username" className="etiqueta-campo">Usuario</label>
+              <div className="login-input-wrap">
+                <UserRound size={17} aria-hidden="true" />
+                <input
+                  id="login-username"
+                  name="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="input-campo"
+                  placeholder="Tu nombre de usuario"
+                  autoComplete="username"
+                  required
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="login-field">
+              <label htmlFor="login-password" className="etiqueta-campo">Contraseña</label>
+              <div className="login-input-wrap">
+                <LockKeyhole size={17} aria-hidden="true" />
+                <input
+                  id="login-password"
+                  name="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input-campo"
+                  placeholder="Tu contraseña"
+                  autoComplete="current-password"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="login-forgot">
+              <Link to="/olvide-password">¿Olvidaste tu contraseña?</Link>
+            </div>
+
+            {error && <p className="login-error" role="alert">{error}</p>}
+
+            <button type="submit" disabled={enviando} className="btn btn-primario login-submit">
+              <span>{enviando ? 'Entrando...' : 'Entrar a mi cuenta'}</span>
+              <ArrowRight size={17} strokeWidth={2} />
+            </button>
+          </form>
+
+          <p className="login-register">
+            ¿Aún no tienes cuenta?{' '}
+            <Link to="/registro">Crea una gratis</Link>
           </p>
-
-                    {error && (
-            <p style={{ color: 'var(--destructive)', fontSize: '13px', marginBottom: '16px' }}>{error}</p>
-          )}
-
-          <button
-            type="submit"
-            disabled={enviando}
-            className="btn btn-primario"
-            style={{ width: '100%', justifyContent: 'center', padding: '10px' }}
-          >
-            <LogIn size={15} strokeWidth={2} />
-            {enviando ? 'Entrando...' : 'Entrar'}
-          </button>
-        </form>
-
-        <p style={{ marginTop: '20px', fontSize: '13px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
-          ¿No tienes cuenta?{' '}
-          <Link to="/registro" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
-            Regístrate
-          </Link>
-        </p>
-      </div>
-    </div>
+          <p className="login-secure"><LockKeyhole size={13} /> Tus datos están protegidos · <Link to="/politica-de-datos">Política de datos</Link></p>
+        </div>
+      </section>
+    </main>
   )
 }
 

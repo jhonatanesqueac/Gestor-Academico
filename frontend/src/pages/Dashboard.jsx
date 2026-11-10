@@ -109,6 +109,18 @@ function Dashboard() {
     }
   }
 
+  const handleEliminarAlerta = async (alertaId) => {
+    const anteriores = alertas
+    // Se quita de inmediato; si el servidor falla, se devuelve
+    setAlertas((actuales) => actuales.filter((a) => a.id !== alertaId))
+    try {
+      await api.delete(`alertas/${alertaId}/`)
+    } catch (error) {
+      console.error('Error eliminando alerta:', error)
+      setAlertas(anteriores)
+    }
+  }
+
   const handlePasoCreado = (nuevo) => setPasos((actuales) => [...actuales, nuevo])
 
   const handlePasoActualizado = (actualizado) =>
@@ -122,14 +134,14 @@ function Dashboard() {
     setPasos((actuales) => [...actuales, ...resultado.pasos])
   }
 
-  if (cargando) return <p style={{ padding: '24px' }}>Cargando datos...</p>
+  if (cargando) return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground animar-entrada">Cargando tu semestre...</div>
 
   return (
     <Layout
       activa={pestañaActiva}
       onCambiarPestaña={setPestañaActiva}
       alertas={alertas}
-      onMarcarLeida={handleMarcarLeida}
+      onMarcarLeida={handleMarcarLeida} onEliminarAlerta={handleEliminarAlerta}
       perfil={perfil}
       asignaturas={asignaturas}
       filtroAsignatura={filtroAsignatura}
