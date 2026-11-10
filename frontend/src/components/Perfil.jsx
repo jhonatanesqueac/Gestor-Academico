@@ -8,6 +8,9 @@ import { Label } from '@/components/ui/label'
 import SelectorColor from './SelectorColor'
 import { esVencida } from '../lib/tareas'
 import { colorTextoSobre } from '../lib/color'
+import { motion } from 'framer-motion'
+
+const MotionCard = motion.create(Card)
 
 const claseTextarea =
   'w-full min-h-24 rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none transition-colors resize-y focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
@@ -168,7 +171,7 @@ function ContenidoPerfil({ perfil, tareas, asignaturas, onPerfilActualizado }) {
   return (
     <div>
       <div className="mb-6">
-        <h2>Perfil</h2>
+        <h2 style={{ fontSize: 28, letterSpacing: '-0.045em' }}>Perfil</h2>
         <p className="text-[13px] text-muted-foreground mt-1">
           Tu información personal y la seguridad de tu cuenta.
         </p>
@@ -176,7 +179,12 @@ function ContenidoPerfil({ perfil, tareas, asignaturas, onPerfilActualizado }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 items-start">
         {/* Resumen */}
-        <Card className="shadow-none gap-0 py-0">
+        <MotionCard
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="shadow-none gap-0 py-0 rounded-3xl"
+        >
           <CardContent className="p-6 flex flex-col items-center text-center">
             <div
               className="size-20 rounded-full flex items-center justify-center text-[28px] font-semibold transition-colors"
@@ -205,11 +213,16 @@ function ContenidoPerfil({ perfil, tareas, asignaturas, onPerfilActualizado }) {
               <Dato etiqueta="Completadas" valor={completadas} />
             </div>
           </CardContent>
-        </Card>
+        </MotionCard>
 
         <div className="flex flex-col gap-6 min-w-0">
           {/* Información personal */}
-          <Card className="shadow-none gap-0 py-0">
+          <MotionCard
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="shadow-none gap-0 py-0 rounded-3xl"
+        >
             <CardContent className="p-6">
               <form onSubmit={handleGuardar} className="flex flex-col gap-5">
                 <div>
@@ -292,10 +305,15 @@ function ContenidoPerfil({ perfil, tareas, asignaturas, onPerfilActualizado }) {
                 </div>
               </form>
             </CardContent>
-          </Card>
+          </MotionCard>
 
           {/* Seguridad */}
-          <Card className="shadow-none gap-0 py-0">
+          <MotionCard
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="shadow-none gap-0 py-0 rounded-3xl"
+        >
             <CardContent className="p-6">
               <form onSubmit={handleCambiarPassword} className="flex flex-col gap-4 max-w-md">
                 <div>
@@ -323,7 +341,7 @@ function ContenidoPerfil({ perfil, tareas, asignaturas, onPerfilActualizado }) {
                 </div>
               </form>
             </CardContent>
-          </Card>
+          </MotionCard>
         </div>
       </div>
     </div>

@@ -4,7 +4,9 @@ import Registro from './pages/Registro'
 import Dashboard from './pages/Dashboard'
 import OlvidePassword from './pages/OlvidePassword'
 import RestablecerPassword from './pages/RestablecerPassword'
+import PoliticaDatos from './pages/PoliticaDatos'
 import RutaProtegida from './components/RutaProtegida'
+import CookieBanner from './components/CookieBanner'
 import { AuthProvider } from './context/AuthContext'
 
 function App() {
@@ -13,6 +15,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
+        <Route path="/politica-de-datos" element={<PoliticaDatos />} />
         <Route path="/olvide-password" element={<OlvidePassword />} />
         <Route path="/restablecer-password/:uidb64/:token" element={<RestablecerPassword />} />
         <Route
@@ -25,6 +28,7 @@ function App() {
         />
         <Route path="/" element={<Navigate to="/login" />} />
       </Routes>
+      <CookieBanner />
     </AuthProvider>
   )
 }

@@ -1,7 +1,15 @@
 import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { KeyRound, Workflow } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { ArrowLeft, ArrowRight, Check, CircleCheck, LockKeyhole, Workflow } from 'lucide-react'
 import api from '../api/axios'
+import { stagger, rise } from '../lib/motion'
+
+const CONSEJOS = [
+  'Mínimo 8 caracteres',
+  'Mezcla letras, números y símbolos',
+  'Evita contraseñas comunes',
+]
 
 function RestablecerPassword() {
   const { uidb64, token } = useParams()
@@ -36,87 +44,138 @@ function RestablecerPassword() {
   }
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--bg)',
-        padding: '20px',
-      }}
-    >
-      <div className="animar-entrada panel" style={{ width: '380px', maxWidth: '100%', padding: '36px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '22px' }}>
-          <div
-            style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: 'var(--r-md)',
-              background: 'var(--accent)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '12px',
-            }}
-          >
-            <Workflow size={22} color="#f2f7f8" strokeWidth={2.1} />
+    <main className="login-page">
+      <div className="login-glow login-glow-one" aria-hidden="true" />
+      <div className="login-glow login-glow-two" aria-hidden="true" />
+
+      <section className="login-shell animar-entrada" aria-label="Crear nueva contraseña en StudyFlow">
+        <aside className="login-showcase">
+          <div className="login-showcase-content">
+            <Link to="/login" className="login-brand" aria-label="StudyFlow, ir al inicio de sesión">
+              <span className="login-brand-icon"><Workflow size={21} strokeWidth={2.2} /></span>
+              <span>StudyFlow</span>
+            </Link>
+
+            <div className="login-message">
+              <span className="login-eyebrow"><span /> CASI LISTO</span>
+              <h1>Elige tu nueva<br />contraseña.</h1>
+              <p>Una contraseña segura protege tus tareas, tu calendario y tus datos.</p>
+            </div>
+
+            <div className="login-preview">
+              <div className="login-preview-top">
+                <span className="login-preview-label">Para que sea segura</span>
+              </div>
+              {CONSEJOS.map((consejo) => (
+                <div key={consejo} className="login-preview-task">
+                  <span className="login-check"><Check size={12} strokeWidth={2.5} /></span>
+                  <span>{consejo}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <h1 style={{ fontSize: '18px', marginBottom: '2px' }}>Nueva contraseña</h1>
-        </div>
+          <p className="login-showcase-footnote">Pequeños pasos. Grandes logros.</p>
+          <div className="login-orbit login-orbit-one" />
+          <div className="login-orbit login-orbit-two" />
+        </aside>
 
-        {exito ? (
-          <p style={{ fontSize: '13.5px', textAlign: 'center', color: 'var(--text-muted)' }}>
-            Contraseña actualizada. Redirigiendo al login...
-          </p>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: '12px' }}>
-              <label className="etiqueta-campo">Nueva contraseña</label>
-              <input
-                type="password"
-                value={nuevaPassword}
-                onChange={(e) => setNuevaPassword(e.target.value)}
-                className="input-campo"
-                required
-                autoFocus
-              />
-            </div>
+        <div className="login-form-panel">
+          <div className="login-form-heading">
+            <span className="login-welcome">NUEVA CONTRASEÑA</span>
+            <h2>Restablécela</h2>
+            <p>Escribe tu contraseña nueva y confírmala para continuar.</p>
+          </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label className="etiqueta-campo">Confirma la contraseña</label>
-              <input
-                type="password"
-                value={confirmarPassword}
-                onChange={(e) => setConfirmarPassword(e.target.value)}
-                className="input-campo"
-                required
-              />
-            </div>
-
-            {error && (
-              <p style={{ color: 'var(--alerta)', fontSize: '12px', marginBottom: '16px' }}>{error}</p>
-            )}
-
-            <button
-              type="submit"
-              disabled={enviando}
-              className="btn btn-primario"
-              style={{ width: '100%', justifyContent: 'center', padding: '10px' }}
+          {exito ? (
+            <motion.div
+              role="status"
+              aria-live="polite"
+              initial={{ opacity: 0, scale: 0.97, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 14,
+                padding: '18px 20px',
+                border: '1px solid var(--border)',
+                borderRadius: 14,
+                background: 'var(--accent)',
+              }}
             >
-              <KeyRound size={15} strokeWidth={2} />
-              {enviando ? 'Guardando...' : 'Restablecer contraseña'}
-            </button>
-          </form>
-        )}
+              <CircleCheck size={22} style={{ color: 'var(--primary)', flexShrink: 0, marginTop: 2 }} />
+              <p style={{ fontSize: 13.5, lineHeight: 1.65, color: 'var(--accent-foreground)' }}>
+                Contraseña actualizada. Te llevamos al inicio de sesión…
+              </p>
+            </motion.div>
+          ) : (
+            <motion.form
+              onSubmit={handleSubmit}
+              className="login-form"
+              variants={stagger}
+              initial="hidden"
+              animate="show"
+            >
+              <motion.div variants={rise} className="login-field">
+                <label htmlFor="reset-nueva" className="etiqueta-campo">Nueva contraseña</label>
+                <div className="login-input-wrap">
+                  <LockKeyhole size={17} aria-hidden="true" />
+                  <input
+                    id="reset-nueva"
+                    name="nueva_password"
+                    type="password"
+                    value={nuevaPassword}
+                    onChange={(e) => setNuevaPassword(e.target.value)}
+                    className="input-campo"
+                    placeholder="Tu nueva contraseña"
+                    autoComplete="new-password"
+                    required
+                    autoFocus
+                  />
+                </div>
+              </motion.div>
 
-        <p style={{ marginTop: '20px', fontSize: '13px', textAlign: 'center', color: 'var(--text-muted)' }}>
-          <Link to="/login" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
-            Volver al login
-          </Link>
-        </p>
-      </div>
-    </div>
+              <motion.div variants={rise} className="login-field">
+                <label htmlFor="reset-confirmar" className="etiqueta-campo">Confirma la contraseña</label>
+                <div className="login-input-wrap">
+                  <LockKeyhole size={17} aria-hidden="true" />
+                  <input
+                    id="reset-confirmar"
+                    name="confirmar_password"
+                    type="password"
+                    value={confirmarPassword}
+                    onChange={(e) => setConfirmarPassword(e.target.value)}
+                    className="input-campo"
+                    placeholder="Repite la contraseña"
+                    autoComplete="new-password"
+                    required
+                  />
+                </div>
+              </motion.div>
+
+              {error && <p className="login-error" role="alert">{error}</p>}
+
+              <motion.div variants={rise}>
+                <button type="submit" disabled={enviando} className="btn btn-primario login-submit">
+                  <span>{enviando ? 'Guardando...' : 'Restablecer contraseña'}</span>
+                  <ArrowRight size={17} strokeWidth={2} />
+                </button>
+              </motion.div>
+            </motion.form>
+          )}
+
+          <p className="login-register">
+            <Link to="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <ArrowLeft size={13} /> Volver al login
+            </Link>
+          </p>
+          <p className="login-secure">
+            <LockKeyhole size={13} /> Tus datos están protegidos ·{' '}
+            <Link to="/politica-de-datos" style={{ color: 'inherit' }}>Política de datos</Link>
+          </p>
+        </div>
+      </section>
+    </main>
   )
 }
 

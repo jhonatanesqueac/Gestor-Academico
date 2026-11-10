@@ -6,15 +6,18 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import AnilloCriticidad from './AnilloCriticidad'
 import { esVencida } from '../lib/tareas'
+import { motion } from 'framer-motion'
+
+const MotionCard = motion.create(Card)
 
 function formatoFecha(f) {
   return new Date(f).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-function FilaHistorial({ tarea, tipo, onCambiarEstado, onEliminar }) {
+function FilaHistorial({ tarea, tipo, onCambiarEstado, onEliminar, indice = 0 }) {
   const color = tarea.asignatura_color || 'var(--primary)'
   return (
-    <div className="flex items-center gap-3 py-3.5 border-b last:border-b-0 border-border/60">
+    <div className="flex items-center gap-3 py-3.5 border-b last:border-b-0 border-border/60 animar-entrada" style={{ animationDelay: `${Math.min(indice, 10) * 45}ms` }}>
       <AnilloCriticidad nivel={tarea.nivel_criticidad} tamaño={36} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -101,7 +104,7 @@ function Historial({ tareas, onTareaActualizada, onTareaEliminada }) {
   return (
     <div>
       <div className="mb-5">
-        <h2>Historial</h2>
+        <h2 style={{ fontSize: 28, letterSpacing: '-0.045em' }}>Historial</h2>
         <p className="text-[13px] text-muted-foreground mt-1">
           Tareas completadas y tareas que vencieron sin marcarse a tiempo.
         </p>
@@ -110,7 +113,7 @@ function Historial({ tareas, onTareaActualizada, onTareaEliminada }) {
       <div className="flex gap-1.5 mb-4">
         <button
           onClick={() => setTab('vencidas')}
-          className="flex items-center gap-1.5 text-[12.5px] font-medium px-3 py-1.5 rounded-md transition-colors"
+          className="flex items-center gap-1.5 text-[12.5px] font-medium px-3 py-1.5 rounded-full transition-colors	"
           style={{
             background: tab === 'vencidas' ? 'var(--primary)' : 'var(--card)',
             color: tab === 'vencidas' ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
@@ -121,7 +124,7 @@ function Historial({ tareas, onTareaActualizada, onTareaEliminada }) {
         </button>
         <button
           onClick={() => setTab('completadas')}
-          className="flex items-center gap-1.5 text-[12.5px] font-medium px-3 py-1.5 rounded-md transition-colors"
+          className="flex items-center gap-1.5 text-[12.5px] font-medium px-3 py-1.5 rounded-full transition-colors	"
           style={{
             background: tab === 'completadas' ? 'var(--primary)' : 'var(--card)',
             color: tab === 'completadas' ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
@@ -132,7 +135,12 @@ function Historial({ tareas, onTareaActualizada, onTareaEliminada }) {
         </button>
       </div>
 
-      <Card className="shadow-none gap-0 py-0">
+      <MotionCard
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="shadow-none gap-0 py-0 rounded-3xl"
+      >
         <CardContent className="p-4">
           {lista.length === 0 && (
             <div className="flex flex-col items-center text-center gap-2 py-12">
@@ -142,9 +150,9 @@ function Historial({ tareas, onTareaActualizada, onTareaEliminada }) {
               </p>
             </div>
           )}
-          {lista.map((t) => (
+          {lista.map((t, i) => (
             <FilaHistorial
-              key={t.id}
+              key={t.id} indice={i}
               tarea={t}
               tipo={tab === 'vencidas' ? 'vencida' : 'completada'}
               onCambiarEstado={handleCambiarEstado}
@@ -152,7 +160,7 @@ function Historial({ tareas, onTareaActualizada, onTareaEliminada }) {
             />
           ))}
         </CardContent>
-      </Card>
+      </MotionCard>
     </div>
   )
 }

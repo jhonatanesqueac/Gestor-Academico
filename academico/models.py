@@ -133,3 +133,19 @@ class Alerta(models.Model):
 
     def __str__(self):
         return f"[{self.tipo}] {self.mensaje[:40]}"
+
+
+class Paso(models.Model):
+    """Un paso del plan para completar una tarea (a mano o sugerido por la IA)."""
+    tarea = models.ForeignKey(Tarea, on_delete=models.CASCADE, related_name='pasos')
+    titulo = models.CharField(max_length=200)
+    completado = models.BooleanField(default=False)
+    orden = models.PositiveSmallIntegerField(default=0)
+    horas_estimadas = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['orden', 'id']
+
+    def __str__(self):
+        return self.titulo

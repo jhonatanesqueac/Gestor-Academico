@@ -8,6 +8,7 @@ import Gestionar from '../components/Gestionar'
 import Inicio from '../components/Inicio'
 import Historial from '../components/Historial'
 import Perfil from '../components/Perfil'
+import Asistente from '../components/Asistente'
 
 const INTERVALO_ALERTAS_MS = 60 * 1000
 
@@ -16,6 +17,7 @@ function Dashboard() {
   const [asignaturas, setAsignaturas] = useState([])
   const [alertas, setAlertas] = useState([])
   const [perfil, setPerfil] = useState(null)
+  const [pasos, setPasos] = useState([])
   const [cargando, setCargando] = useState(true)
   const [pestañaActiva, setPestañaActiva] = useState('inicio')
   const [filtroAsignatura, setFiltroAsignatura] = useState(null)
@@ -37,12 +39,14 @@ function Dashboard() {
       api.get('alertas/'),
       // Si el perfil falla, el resto del dashboard sigue funcionando
       api.get('perfil/').catch(() => null),
+      api.get('pasos/').catch(() => ({ data: [] })),
     ])
-      .then(([respuestaTareas, respuestaAsignaturas, respuestaAlertas, respuestaPerfil]) => {
+      .then(([respuestaTareas, respuestaAsignaturas, respuestaAlertas, respuestaPerfil, respuestaPasos]) => {
         setTareas(respuestaTareas.data)
         setAsignaturas(respuestaAsignaturas.data)
         setAlertas(respuestaAlertas.data)
         setPerfil(respuestaPerfil?.data ?? null)
+        setPasos(respuestaPasos.data)
         setCargando(false)
       })
       .catch((error) => {
@@ -105,14 +109,39 @@ function Dashboard() {
     }
   }
 
-  if (cargando) return <p style={{ padding: '24px' }}>Cargando datos...</p>
+  const handleEliminarAlerta = async (alertaId) => {
+    const anteriores = alertas
+    // Se quita de inmediato; si el servidor falla, se devuelve
+    setAlertas((actuales) => actuales.filter((a) => a.id !== alertaId))
+    try {
+      await api.delete(`alertas/${alertaId}/`)
+    } catch (error) {
+      console.error('Error eliminando alerta:', error)
+      setAlertas(anteriores)
+    }
+  }
+
+  const handlePasoCreado = (nuevo) => setPasos((actuales) => [...actuales, nuevo])
+
+  const handlePasoActualizado = (actualizado) =>
+    setPasos((actuales) => actuales.map((p) => (p.id === actualizado.id ? actualizado : p)))
+
+      const handlePasoEliminado = (id) => setPasos((actuales) => actuales.filter((p) => p.id !== id))
+  
+      const handleAsistenteCreo = (resultado) => {
+    if (resultado.asignatura_creada) handleAsignaturaCreada(resultado.asignatura)
+    handleTareaCreada(resultado.tarea)
+    setPasos((actuales) => [...actuales, ...resultado.pasos])
+  }
+
+  if (cargando) return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground animar-entrada">Cargando tu semestre...</div>
 
   return (
     <Layout
       activa={pestañaActiva}
       onCambiarPestaña={setPestañaActiva}
       alertas={alertas}
-      onMarcarLeida={handleMarcarLeida}
+      onMarcarLeida={handleMarcarLeida} onEliminarAlerta={handleEliminarAlerta}
       perfil={perfil}
       asignaturas={asignaturas}
       filtroAsignatura={filtroAsignatura}
@@ -132,7 +161,7 @@ function Dashboard() {
           onTareaEliminada={handleTareaEliminada}
           filtroAsignatura={filtroAsignatura}
           onQuitarFiltro={() => setFiltroAsignatura(null)}
-          onIrHistorial={() => setPestañaActiva('historial')}
+          onIrHistorial={() => setPestañaActiva('historial')} pasos={pasos} onPasoCreado={handlePasoCreado} onPasoActualizado={handlePasoActualizado} onPasoEliminado={handlePasoEliminado}
         />
       )}
       {pestañaActiva === 'historial' && (
@@ -143,6 +172,13 @@ function Dashboard() {
         <Perfil perfil={perfil} tareas={tareas} asignaturas={asignaturas} onPerfilActualizado={setPerfil} />
       )}
       {pestañaActiva === 'carga' && <GraficoCarga tareas={tareas} />}
+      {pestañaActiva === 'asistente' && (
+        <Asistente
+          asignaturas={asignaturas}
+          onCreada={handleAsistenteCreo}
+          onIrTablero={() => setPestañaActiva('kanban')}
+        />
+      )}
       {pestañaActiva === 'gestionar' && (
         <Gestionar
           asignaturas={asignaturas}
