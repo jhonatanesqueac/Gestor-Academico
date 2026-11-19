@@ -23,7 +23,7 @@ export default function PoliticaDatos() {
 
         <h2>1. Responsable del tratamiento</h2>
         <p>
-          Oscar Vizcaino, estudiantes y desarrolladores del proyecto académico StudyFlow, domicilio en{" "}
+          Oscar Vizcaino, Alexis Julio, estudiantes y desarrolladores del proyecto académico StudyFlow, domicilio en{" "}
           <Todo>Barranquilla, Colombia</Todo>. Correo de contacto para asuntos de datos: StudyFlow@outlook.com.
         </p>
 

@@ -402,8 +402,20 @@ function Inicio({ tareas, onTareaActualizada, onCambiarPestaña, perfil }) {
     .slice(0, 5)
   const serie = datosSemana(tareas)
 
-  const terminadas = tareas.filter((t) => t.estado === 'TERMINADO').length
-  const progreso = tareas.length > 0 ? Math.round((terminadas / tareas.length) * 100) : 0
+  // Progreso del mes en curso: solo cuentan las tareas que vencen este mes y que no
+// se pasaron sin marcar (esas viven en Historial y no deben afectar el porcentaje)
+  const ahora = new Date()
+  const tareasDelMes = tareas.filter((t) => {
+    const fecha = new Date(t.fecha_entrega)
+    return (
+      fecha.getMonth() === ahora.getMonth() &&
+      fecha.getFullYear() === ahora.getFullYear() &&
+      !esVencida(t)
+    )
+  })
+  const terminadas = tareasDelMes.filter((t) => t.estado === 'TERMINADO').length
+  const nombreMes = ahora.toLocaleDateString('es-CO', { month: 'long' })
+  const progreso = tareasDelMes.length > 0 ? Math.round((terminadas / tareasDelMes.length) * 100) : 0
 
   const inicioSemana = inicioDeSemana()
   const finSemana = new Date(inicioSemana)
@@ -544,9 +556,9 @@ function Inicio({ tareas, onTareaActualizada, onCambiarPestaña, perfil }) {
         >
           <AnilloProgreso porcentaje={progreso} />
           <div>
-            <div className="text-[13px] font-semibold" style={{ color: '#f3f5ef' }}>Progreso general</div>
+            <div className="text-[13px] font-semibold" style={{ color: '#f3f5ef' }}>Progreso de {nombreMes}</div>
             <div className="mt-0.5 text-[12px]" style={{ color: '#aebdb0' }}>
-              {terminadas} de {tareas.length} terminadas
+              {tareasDelMes.length === 0 ? 'Sin tareas este mes' : `${terminadas} de ${tareasDelMes.length} terminadas`}
             </div>
           </div>
         </div>
@@ -563,7 +575,7 @@ function Inicio({ tareas, onTareaActualizada, onCambiarPestaña, perfil }) {
           Icono={ListChecks}
           etiqueta="Tareas activas"
           valor={activas.length}
-          detalle={`de ${tareas.length} en total`}
+          detalle="pendientes por entregar"
           tono={TONOS[0]}
         />
         <StatCard
@@ -591,9 +603,9 @@ function Inicio({ tareas, onTareaActualizada, onCambiarPestaña, perfil }) {
         />
         <StatCard
           Icono={TrendingUp}
-          etiqueta="Progreso general"
+          etiqueta={`Progreso de ${nombreMes}`}
           valor={progreso}
-          detalle={`${terminadas} de ${tareas.length} terminadas`}
+          detalle={tareasDelMes.length === 0 ? 'Sin tareas este mes' : `${terminadas} de ${tareasDelMes.length} terminadas`}
           tono={TONOS[3]}
         />
       </motion.div>
